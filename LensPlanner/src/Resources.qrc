@@ -1,0 +1,14 @@
+<RCC>
+  <qresource prefix="/LensPlanner/Shaders">
+    <file alias = "OpticalSystemPreviewer_vs.glsl">Resources/OpticalSystemPreviewer_vs.glsl</file>
+    <file alias = "OpticalSystemPreviewer_fs.glsl">Resources/OpticalSystemPreviewer_fs.glsl</file>
+  </qresource>
+  <qresource prefix="/LensPlanner/Icons">
+    <file alias = "add128.png">Resources/add128.png</file>
+    <file alias = "copy128.png">Resources/copy128.png</file>
+    <file alias = "delete128.png">Resources/delete128.png</file>
+    <file alias = "up128.png">Resources/up128.png</file>
+    <file alias = "down128.png">Resources/down128.png</file>
+    <file alias = "trash128.png">Resources/trash128.png</file>
+  </qresource>
+</RCC>

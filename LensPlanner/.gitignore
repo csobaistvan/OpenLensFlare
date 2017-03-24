@@ -1,0 +1,8 @@
+# CMake build files
+build/**
+
+# Installed files
+bin/**
+
+# Any hidden configuration folders
+.*/**

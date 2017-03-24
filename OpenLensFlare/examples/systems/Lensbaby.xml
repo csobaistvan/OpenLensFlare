@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opticalSystem>
+	<name>Lensbaby</name>
+    <fnumber>11</fnumber>
+    <effectiveFocalLength>129</effectiveFocalLength>
+    <fieldOfView>60</fieldOfView>
+    <filmWidth>36</filmWidth>
+    <filmHeight>24</filmHeight>
+	
+    <elements>
+        <element>
+            <type>lensSpherical</type>
+            <height>24.0</height>
+            <thickness>9.60</thickness>
+            <radius>65.22</radius>
+            <refractiveIndex>1.5</refractiveIndex>
+            <abbeNumber>50</abbeNumber>
+            <coatingLambda>620</coatingLambda>
+            <coatingIor>1.38</coatingIor>
+        </element>
+		
+        <element>
+            <type>lensSpherical</type>
+            <height>24.0</height>
+            <thickness>4.20</thickness>
+            <radius>-62.03</radius>
+            <refractiveIndex>1.5</refractiveIndex>
+            <abbeNumber>50</abbeNumber>
+            <coatingLambda>620</coatingLambda>
+            <coatingIor>1.38</coatingIor>
+        </element>
+		
+        <element>
+            <type>lensSpherical</type>
+            <height>24.0</height>
+            <thickness>5.00</thickness>
+            <radius>-1240.67</radius>
+            <refractiveIndex>1.0</refractiveIndex>
+            <abbeNumber>89.3</abbeNumber>
+            <coatingLambda>620</coatingLambda>
+            <coatingIor>1.38</coatingIor>
+        </element>
+		
+        <element>
+            <type>apertureStop</type>
+            <height>20.0</height>
+            <thickness>105.00</thickness>
+            <refractiveIndex>1.0</refractiveIndex>
+            <abbeNumber>89.3</abbeNumber>
+            <mask>D:\Program\Programming\Projects\Cpp\OpenLensFlare\OpenLensFlare\examples\systems\apertureDist.bmp</mask>
+            <maskFT>D:\Program\Programming\Projects\Cpp\OpenLensFlare\OpenLensFlare\examples\systems\apertureFT.bmp</maskFT>
+        </element>
+		
+        <element>
+            <type>sensor</type>
+            <height>0</height>
+            <thickness>0</thickness>
+            <radius>0</radius>
+            <refractiveIndex>1.0</refractiveIndex>
+            <abbeNumber>89.3</abbeNumber>
+        </element>
+    </elements>
+</opticalSystem>
