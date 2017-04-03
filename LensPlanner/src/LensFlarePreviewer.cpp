@@ -29,6 +29,7 @@ LensFlarePreviewer::LensFlarePreviewer(OLEF::OpticalSystem* system, QWidget* par
     fmt.setGreenBufferSize(8);
     fmt.setBlueBufferSize(8);
     fmt.setAlphaBufferSize(8);
+    fmt.setSamples(4);
 
     setFormat(fmt);
 

@@ -17,7 +17,6 @@ OpticalSystemPreviewer::OpticalSystemPreviewer(OLEF::OpticalSystem* system, QWid
     QOpenGLWidget(parent),
     m_opticalSystem(system),
     m_ghosts(system),
-    m_backgroundColor(0x000000FF),
     m_generateGeometry(true),
     m_zoomFactor(0.3f),
     m_renderShader(0)
@@ -32,6 +31,7 @@ OpticalSystemPreviewer::OpticalSystemPreviewer(OLEF::OpticalSystem* system, QWid
     fmt.setGreenBufferSize(8);
     fmt.setBlueBufferSize(8);
     fmt.setAlphaBufferSize(8);
+    fmt.setSamples(16);
 
     setFormat(fmt);
 
@@ -39,13 +39,14 @@ OpticalSystemPreviewer::OpticalSystemPreviewer(OLEF::OpticalSystem* system, QWid
     setMinimumSize(QSize(300, 300));
 
     // Append the default ray
-    m_raysToDraw.push_back({ -1, 2, 8.0f, 16.0f, 0.0f });
+    m_raysToDraw.push_back({ 10, 20, 10.0f, 1.0f, 0.0f });
 
     // Set the default colors
-    m_rays.m_color = QColor(255, 0, 0);
-    m_lenses.m_color = QColor(255, 128, 0);
-    m_apertures.m_color = QColor(0, 255, 0);
-    m_films.m_color = QColor(255, 255, 255);
+    m_backgroundColor = QColor(223, 223, 223);
+    m_rays.m_color = QColor(0, 0, 0);
+    m_lenses.m_color = QColor(0, 0, 0);
+    m_apertures.m_color = QColor(0, 0, 0);
+    m_films.m_color = QColor(0, 0, 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -370,8 +371,6 @@ void OpticalSystemPreviewer::generateRayGeometry(const Ray& ray)
                 }
                 break;
             }
-            if (!keep)
-                break;
 
             // Reflect or refract the ray
             if (reflect)
@@ -380,8 +379,18 @@ void OpticalSystemPreviewer::generateRayGeometry(const Ray& ray)
             }
             else
             {
-                float n0 = (i == 0 ? 1.0f : (*m_opticalSystem)[i - d].getIndexOfRefraction());
-                float n2 = lens.getIndexOfRefraction();
+                float n0, n2;
+                
+                if (d > 0)
+                {
+                    n0 = (i == 0 ? 1.0f : (*m_opticalSystem)[i - 1].getIndexOfRefraction());
+                    n2 = (*m_opticalSystem)[i].getIndexOfRefraction();
+                }
+                else
+                {
+                    n0 = (*m_opticalSystem)[i].getIndexOfRefraction();
+                    n2 = (*m_opticalSystem)[i - 1].getIndexOfRefraction();
+                }
                 dir = glm::refract(dir, normal, n0 / n2);
 
                 if (dir == glm::vec2(0.0f))
@@ -389,12 +398,23 @@ void OpticalSystemPreviewer::generateRayGeometry(const Ray& ray)
             }
 
             // Decrease the lens distance
-            lensDistance = lensDistance - d * lens.getThickness();
+            if (d > 0)
+            {
+                lensDistance = lensDistance - (*m_opticalSystem)[i].getThickness();
+            }
+            else
+            {
+                lensDistance = lensDistance + (*m_opticalSystem)[i - 1].getThickness();
+
+            }
 
             // Store the position
             glm::vec2 vertex = pos;
             vertex.x = sensorDistance - vertex.x;
             m_rays.m_vertices.push_back(vertex);
+
+            if (!keep)
+                break;
         }
         
         // Store the indices
