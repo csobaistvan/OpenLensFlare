@@ -19,95 +19,125 @@ public:
     void paintGL();
     void resizeGL(int w, int h);
 
+    /// QWidget events.
+    void mouseMoveEvent(QMouseEvent* event);
+    void mousePressEvent(QMouseEvent* event);
+    void wheelEvent(QWheelEvent* event);
+
 public slots:
     /// Slot, used to indicate that the underlying optical system changed.
     void opticalSystemChanged();
 
 private:
-    /// Represents a set of line strips, with all the data needed to render them.
-    struct LineSet
-    {
-        /// Color of the lines.
-        QColor m_color;
-
-        /// The vertex buffer that holds the vertices.
-        GLuint m_vbo;
-
-        /// The vertex buffer that holds the vertices.
-        GLuint m_vao;
-
-        /// Line strip vertex positions.
-        std::vector<glm::vec2> m_vertices;
-        
-        /// Line strip start indices and vertex counts.
-        std::vector<std::array<int, 2>> m_indices;
-    };
-
     /// Parameters for a ray to visualize.
     struct Ray
     {
         /// Index of the ghost to render.
-        int m_ghostIndex;
+        OLEF::Ghost m_ghost;
+
+        /// Color of the corresponding lines.
+        QColor m_color;
 
         /// Number of rays.
-        int m_incomingRayCount;
+        int m_rayCount;
+
+        /// Distance from the first element from where the rays should originate.
+        float m_startDistance;
 
         /// Offset of the first ray, from the top.
-        float m_incomingRayOffset;
+        float m_startHeight;
 
-        /// The spacing between incoming rays.
-        float m_incomingRaySpacing;
+        /// Offset of the last ray, from the top.
+        float m_endHeight;
 
         /// Angle of the incoming ray.
-        float m_incomingRayAngle;
+        float m_angle;
+    };
+
+    /// Holds the index of the starting vertex of each line strip, and the 
+    /// number of vertices that correspond to said strips.
+    struct LineStripData
+    {
+        /// Color of the line strip. Stored here (instead of with the batch)
+        /// to allow per-strip color, should it become needed.
+        QColor m_color;
+
+        /// Index of the starting vertex.
+        int m_start;
+
+        /// Number of vertices.
+        int m_length;
     };
 
     /// Generates geometry for rendering.
-    void computeSystemBounds();
-    void generateLensGeometry();
-    void generateRayGeometry(const Ray& ray);
+    void storeLineStrip(QColor color, const std::vector<glm::vec2>& vertices);
+    void traceRay(const Ray& ray, int id);
     void generateRayGeometry();
     void generateGeometry();
+    void generateLensGeometry();
+    void generateGridGeometry();
+    void computeProjection();
 
-    /// Renders a line set.
-    void renderLineSet(const LineSet& lineSet);
-
-    /// The optical system to edit.
+    /// The optical system to preview.
     OLEF::OpticalSystem* m_opticalSystem;
 
-    /// All the possible ghosts in the system.
-    OLEF::GhostList m_ghosts;
+    /// Center of the viewport.
+    glm::vec2 m_viewCenter;
 
-    /// Background color.
+    /// Viewport dimension
+    float m_viewArea;
+
+    /// Coordinates for mouse grabbing.
+    int m_grabX;
+    int m_grabY;
+
+    /// Sensitivity values for zooming and dragging.
+    float m_zoomSensitivity;
+    float m_dragSensitivity;
+
+    /// Color of the preview canvas.
     QColor m_backgroundColor;
 
-    /// Whether we should generate new geometry.
-    bool m_generateGeometry;
+    /// Color of the background grid.
+    QColor m_gridColor;
 
-    /// Rays to visualize.
+    /// Color of the iris.
+    QColor m_irisColor;
+
+    /// Color of the lenses.
+    QColor m_lensColor;
+
+    /// Color of the optical axis.
+    QColor m_axisColor;
+
+    /// Resolution of the lens strips.
+    int m_lensResolution;
+
+    /// Whether we should generate new geometry for the optical system.
+    bool m_generateSystemGeometry;
+
+    /// Whether we should generate new geometry for the ray batches.
+    bool m_generateRayGeometry;
+
+    /// Ray batches to trace through the system.
     std::vector<Ray> m_raysToDraw;
 
-    /// Sets of input rays.
-    LineSet m_rays;
-
-    /// Set of lenses
-    LineSet m_lenses;
-
-    /// Aperture lines
-    LineSet m_apertures;
-
-    /// Film lines (including the optical axis)
-    LineSet m_films;
-
-    /// The zooming factor.
-    float m_zoomFactor;
-
-    /// Transform matrix.
-    glm::mat4 m_transform;
-
-    /// Projection matrix.
-    glm::mat4 m_proj;
-
-    /// The rendering shader.
+    /// The shader used to render the preview.
     GLuint m_renderShader;
+
+    /// Projection matrix for projecting the line strips.
+    glm::mat4 m_projection;
+
+    /// Vertex buffer that holds the vertices to draw.
+    GLuint m_vbo;
+
+    /// Vertex array object used for rendering the line strips.
+    GLuint m_vao;
+
+    /// Vertex positions for the line strips that have to be rendered for the 
+    /// preview.
+    std::vector<glm::vec2> m_vertices;
+
+    /// The list of all the line strips to render.
+    std::vector<LineStripData> m_lineStrips;
 };

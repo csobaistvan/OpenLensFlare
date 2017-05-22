@@ -114,9 +114,15 @@ MainWindow::MainWindow(QWidget* parent):
     connect(m_opticalSystemEditor, &OpticalSystemEditor::opticalSystemChangedSignal, 
         m_lensFlarePreviewer, &LensFlarePreviewer::opticalSystemChanged);
 
-    // Create the top splitter.
+    // Create the tab widget for the editor.
+    QTabWidget* editorTab = new QTabWidget(this);
+    editorTab->addTab(m_opticalSystemEditor, "Optical System");
+    editorTab->addTab(new QWidget(this), "Optical System Preview");
+    editorTab->addTab(new QWidget(this), "Lens Flare Preview");
+
+    // Create the top splitter, which contains the editor and lens flare widgets.
     QSplitter* topSplitter = new QSplitter(Qt::Horizontal, this);
-    topSplitter->addWidget(m_opticalSystemEditor);
+    topSplitter->addWidget(editorTab);
     topSplitter->addWidget(m_lensFlarePreviewer);
     topSplitter->setSizes
     ({
@@ -124,7 +130,8 @@ MainWindow::MainWindow(QWidget* parent):
         desktopSize.width() - m_opticalSystemEditor->minimumSize().width(),
     });
 
-    // Create the main (horizontal) splitter
+    // Create the horizontal splitter which splits the top section (editors and
+    // lens flare preview) and the optical system previewer widgets.
     QSplitter* horizontalSplitter = new QSplitter(Qt::Vertical, this);
     horizontalSplitter->addWidget(topSplitter);
     horizontalSplitter->addWidget(m_opticalSystemPreviewer);
