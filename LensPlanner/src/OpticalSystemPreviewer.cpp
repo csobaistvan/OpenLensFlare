@@ -22,9 +22,13 @@ OpticalSystemPreviewer::OpticalSystemPreviewer(OLEF::OpticalSystem* system, QWid
     m_dragSensitivity(1.0f / 128.0f),
     m_backgroundColor(223, 223, 223),
     m_gridColor(128, 128, 128),
-    m_lensColor(0, 0, 0),
+    m_gridLineWidth(1.0f),
     m_irisColor(0, 0, 0),
+    m_irisLineWidth(1.0f),
+    m_lensColor(0, 0, 0),
+    m_lensLineWidth(1.0f),
     m_axisColor(0, 0, 0),
+    m_axisLineWidth(1.0f),
     m_lensResolution(16),
     m_generateSystemGeometry(true),
     m_generateRayGeometry(true),
@@ -34,7 +38,7 @@ OpticalSystemPreviewer::OpticalSystemPreviewer(OLEF::OpticalSystem* system, QWid
     QSurfaceFormat fmt;
 
     fmt.setVersion(3, 3);
-    fmt.setProfile(QSurfaceFormat::CoreProfile);
+    fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
     fmt.setDepthBufferSize(24);
     fmt.setRedBufferSize(8);
     fmt.setGreenBufferSize(8);
@@ -64,6 +68,12 @@ OpticalSystemPreviewer::~OpticalSystemPreviewer()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+void OpticalSystemPreviewer::invalidate()
+{
+    m_generateSystemGeometry = m_generateRayGeometry = true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 void OpticalSystemPreviewer::update()
 {
     QOpenGLWidget::update();
@@ -74,18 +84,6 @@ void OpticalSystemPreviewer::opticalSystemChanged()
 {
     // Indicate that the geometry needs to be regeneretated.
     m_generateSystemGeometry = true;
-
-    // TODO: remove this, and add a way to specify custom ghosts
-    auto ghosts = OLEF::GhostList(m_opticalSystem);
-    if (ghosts.getGhostCount() > 0)
-    {
-        m_raysToDraw =
-        {
-            { ghosts[0], { 255, 0, 0 } , 20, 1.0f, -10.0f, 10.0f, 0.0f },
-            //{ ghosts[1], { 0, 255, 0 } , 20, 1.0f, -10.0f, 10.0f, 0.0f },
-            //{ ghosts[2], { 0, 0, 255 } , 20, 1.0f, -10.0f, 10.0f, 0.0f },
-        };
-    }
 
     // Update ourselves
     update();
@@ -240,23 +238,24 @@ void OpticalSystemPreviewer::initializeGL()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void OpticalSystemPreviewer::storeLineStrip(QColor color, const std::vector<glm::vec2>& vertices)
+void OpticalSystemPreviewer::storeLineStrip(QColor color, float width, const QVector<glm::vec2>& vertices)
 {
     // Store the line strip
     LineStripData lineStrip;
 
     lineStrip.m_color = color;
+    lineStrip.m_width = width;
     lineStrip.m_start = m_vertices.size();
     lineStrip.m_length = vertices.size();
 
     m_lineStrips.push_back(lineStrip);
 
     // Store the line strip the vertices.
-    m_vertices.insert(m_vertices.end(), vertices.begin(), vertices.end());
+    m_vertices.append(vertices);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void OpticalSystemPreviewer::traceRay(const Ray& ray, int rayId)
+void OpticalSystemPreviewer::traceRay(const RayBatch& ray, int rayId)
 {
     // Various optical system attributes
     float maxHeight = m_opticalSystem->getTotalHeight();
@@ -268,7 +267,7 @@ void OpticalSystemPreviewer::traceRay(const Ray& ray, int rayId)
     float heightStep = (ray.m_endHeight - ray.m_startHeight) / (ray.m_rayCount - 1);
 
     // Vertex data for the current ray
-    std::vector<glm::vec2> vertices;
+    QVector<glm::vec2> vertices;
     vertices.reserve(m_opticalSystem->getElementCount() + 1);
 
     // Distance of the lens along the optical axis.
@@ -278,7 +277,7 @@ void OpticalSystemPreviewer::traceRay(const Ray& ray, int rayId)
     glm::vec2 dir = glm::vec2(glm::cos(ray.m_angle), glm::sin(ray.m_angle));
 
     // Position of the ray.
-    glm::vec2 pos{ ray.m_startDistance, ray.m_startHeight + rayId * heightStep };
+    glm::vec2 pos{ -ray.m_startDistance, ray.m_startHeight + rayId * heightStep };
 
     // Intersection normal.
     glm::vec2 normal;
@@ -419,7 +418,7 @@ void OpticalSystemPreviewer::traceRay(const Ray& ray, int rayId)
     }
     
     // Store the line strip
-    storeLineStrip(ray.m_color, vertices);
+    storeLineStrip(ray.m_color, ray.m_width, vertices);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -455,7 +454,7 @@ void OpticalSystemPreviewer::generateLensGeometry()
 	float apertureHeight = m_opticalSystem->getEffectiveApertureHeight();
 
     // Generate the optical axis line
-    storeLineStrip(m_axisColor, 
+    storeLineStrip(m_axisColor, m_axisLineWidth,
     {
         glm::vec2(-sensorDistance * OPTICAL_SYSTEM_SLACK, 0),
         glm::vec2(sensorDistance, 0),
@@ -484,7 +483,7 @@ void OpticalSystemPreviewer::generateLensGeometry()
                 float angleStep = (maxAngle * 2.0f) / resolution;
 
                 // Vertices of the lens geometry
-                std::vector<glm::vec2> vertices(resolution + 1);
+                QVector<glm::vec2> vertices(resolution + 1);
 
                 // Generate geometry
                 for (int i = 0; i <= resolution; ++i, curAngle += angleStep)
@@ -494,21 +493,21 @@ void OpticalSystemPreviewer::generateLensGeometry()
                 }
 
                 // Store the lens data
-                storeLineStrip(m_lensColor, vertices);
+                storeLineStrip(m_lensColor, m_lensLineWidth, vertices);
             }
             break;
             
             case OLEF::OpticalSystemElement::ElementType::APERTURE_STOP:
             {
                 // Store the upper section
-                storeLineStrip(m_irisColor,
+                storeLineStrip(m_irisColor, m_irisLineWidth,
                 {
                     glm::vec2(lensDistance, apertureHeight),
                     glm::vec2(lensDistance, housingHeight),
                 });
 
                 // Store the lower section
-                storeLineStrip(m_irisColor,
+                storeLineStrip(m_irisColor, m_irisLineWidth,
                 {
                     glm::vec2(lensDistance, -apertureHeight),
                     glm::vec2(lensDistance, -housingHeight),
@@ -519,7 +518,7 @@ void OpticalSystemPreviewer::generateLensGeometry()
             case OLEF::OpticalSystemElement::ElementType::SENSOR:
             {
                 // Store the sensor line
-                storeLineStrip(m_axisColor, 
+                storeLineStrip(m_axisColor, m_axisLineWidth,
                 {
                     glm::vec2(lensDistance, filmHeight),
                     glm::vec2(lensDistance, -filmHeight),
@@ -577,6 +576,7 @@ void OpticalSystemPreviewer::paintGL()
         m_backgroundColor.blueF(), m_backgroundColor.alphaF());
     f->glClear(GL_COLOR_BUFFER_BIT);
     f->glDisable(GL_BLEND);
+    f->glEnable(GL_LINE_SMOOTH);
 
     /// Check if we need to generate new geometry.
     if (m_generateSystemGeometry || m_generateRayGeometry)
@@ -604,6 +604,7 @@ void OpticalSystemPreviewer::paintGL()
             strip.m_color.blueF(), 
             strip.m_color.alphaF());
         
+        f->glLineWidth(strip.m_width);
         f->glUniformMatrix4fv(xformLoc, 1, GL_FALSE, glm::value_ptr(m_projection));
         f->glUniform4fv(colorLoc, 1, glm::value_ptr(color));
 

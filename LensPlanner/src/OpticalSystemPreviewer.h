@@ -11,6 +11,63 @@ public:
     explicit OpticalSystemPreviewer(OLEF::OpticalSystem* system, QWidget* parent = nullptr);
     ~OpticalSystemPreviewer();
 
+    /// Parameters for a ray to visualize.
+    struct RayBatch
+    {
+        /// The ghost to render.
+        OLEF::Ghost m_ghost;
+
+        /// Color of the corresponding lines.
+        QColor m_color;
+
+        /// Width of the line strips.
+        float m_width;
+
+        /// Number of rays.
+        int m_rayCount;
+
+        /// Distance from the first element from where the rays should originate.
+        float m_startDistance;
+
+        /// Offset of the first ray, from the top.
+        float m_startHeight;
+
+        /// Offset of the last ray, from the top.
+        float m_endHeight;
+
+        /// Angle of the incoming ray.
+        float m_angle;
+    };
+
+    /// Getters/setters for the preview attributes.
+    OLEF::OpticalSystem* getOpticalSystem() const { return m_opticalSystem; }
+    QColor getBackgroundColor() const { return m_backgroundColor; };
+    QColor getGridColor() const { return m_gridColor; };
+    float getGridLineWidth() const { return m_gridLineWidth; };
+    QColor getIrisColor() const { return m_irisColor; };
+    float getIrisLineWidth() const { return m_irisLineWidth; };
+    QColor getLensColor() const { return m_lensColor; };
+    float getLensLineWidth() const { return m_lensLineWidth; };
+    QColor getAxisColor() const { return m_axisColor; };
+    float getAxisLineWidth() const { return m_axisLineWidth; };
+    int getLensResolution() const { return m_lensResolution; };
+    const QVector<RayBatch>& getRayBatchParameters() const { return m_raysToDraw; }
+
+    void setBackgroundColor(QColor value) { m_backgroundColor = value; };
+    void setGridColor(QColor value) { m_gridColor = value; };
+    void setGridLineWidth(float value) { m_gridLineWidth = value; };
+    void setIrisColor(QColor value) { m_irisColor = value; };
+    void setIrisLineWidth(float value) { m_irisLineWidth = value; };
+    void setLensColor(QColor value) { m_lensColor = value; };
+    void setLensLineWidth(float value) { m_lensLineWidth = value; };
+    void setAxisColor(QColor value) { m_axisColor = value; };
+    void setAxisLineWidth(float value) { m_axisLineWidth = value; };
+    void setLensResolution(int value) { m_lensResolution = value; };
+    void setRayBatchParameters(const QVector<RayBatch>& value) { m_raysToDraw = value; }
+
+    /// Invalidates the current preview.
+    void invalidate();
+
     /// Update hook.
     void update();
 
@@ -29,30 +86,6 @@ public slots:
     void opticalSystemChanged();
 
 private:
-    /// Parameters for a ray to visualize.
-    struct Ray
-    {
-        /// Index of the ghost to render.
-        OLEF::Ghost m_ghost;
-
-        /// Color of the corresponding lines.
-        QColor m_color;
-
-        /// Number of rays.
-        int m_rayCount;
-
-        /// Distance from the first element from where the rays should originate.
-        float m_startDistance;
-
-        /// Offset of the first ray, from the top.
-        float m_startHeight;
-
-        /// Offset of the last ray, from the top.
-        float m_endHeight;
-
-        /// Angle of the incoming ray.
-        float m_angle;
-    };
 
     /// Holds the index of the starting vertex of each line strip, and the 
     /// number of vertices that correspond to said strips.
@@ -62,6 +95,9 @@ private:
         /// to allow per-strip color, should it become needed.
         QColor m_color;
 
+        /// Width of the line strip.
+        float m_width;
+
         /// Index of the starting vertex.
         int m_start;
 
@@ -70,8 +106,8 @@ private:
     };
 
     /// Generates geometry for rendering.
-    void storeLineStrip(QColor color, const std::vector<glm::vec2>& vertices);
-    void traceRay(const Ray& ray, int id);
+    void storeLineStrip(QColor color, float width, const QVector<glm::vec2>& vertices);
+    void traceRay(const RayBatch& ray, int id);
     void generateRayGeometry();
     void generateGeometry();
     void generateLensGeometry();
@@ -101,14 +137,26 @@ private:
     /// Color of the background grid.
     QColor m_gridColor;
 
+    /// Width of the grid lines.
+    float m_gridLineWidth;
+
     /// Color of the iris.
     QColor m_irisColor;
+
+    /// Width of the iris lines.
+    float m_irisLineWidth;
 
     /// Color of the lenses.
     QColor m_lensColor;
 
+    /// Width of the lens lines.
+    float m_lensLineWidth;
+
     /// Color of the optical axis.
     QColor m_axisColor;
+
+    /// Width of the axis lines.
+    float m_axisLineWidth;
 
     /// Resolution of the lens strips.
     int m_lensResolution;
@@ -120,7 +168,7 @@ private:
     bool m_generateRayGeometry;
 
     /// Ray batches to trace through the system.
-    std::vector<Ray> m_raysToDraw;
+    QVector<RayBatch> m_raysToDraw;
 
     /// The shader used to render the preview.
     GLuint m_renderShader;
@@ -136,8 +184,8 @@ private:
 
     /// Vertex positions for the line strips that have to be rendered for the 
     /// preview.
-    std::vector<glm::vec2> m_vertices;
+    QVector<glm::vec2> m_vertices;
 
     /// The list of all the line strips to render.
-    std::vector<LineStripData> m_lineStrips;
+    QVector<LineStripData> m_lineStrips;
 };

@@ -108,16 +108,20 @@ MainWindow::MainWindow(QWidget* parent):
     m_opticalSystemPreviewer = new OpticalSystemPreviewer(m_opticalSystem, this);
     m_opticalSystemEditor = new OpticalSystemEditor(
             m_lensFlarePreviewer->getImageLibrary(), m_opticalSystem, this);
+    m_opticalSystemPreviewProperties = new OpticalSystemPreviewProperties(
+        m_opticalSystemPreviewer, this);
 
     connect(m_opticalSystemEditor, &OpticalSystemEditor::opticalSystemChangedSignal, 
         m_opticalSystemPreviewer, &OpticalSystemPreviewer::opticalSystemChanged);
     connect(m_opticalSystemEditor, &OpticalSystemEditor::opticalSystemChangedSignal, 
         m_lensFlarePreviewer, &LensFlarePreviewer::opticalSystemChanged);
+    connect(m_opticalSystemEditor, &OpticalSystemEditor::opticalSystemChangedSignal, 
+        m_opticalSystemPreviewProperties, &OpticalSystemPreviewProperties::opticalSystemChanged);
 
     // Create the tab widget for the editor.
     QTabWidget* editorTab = new QTabWidget(this);
     editorTab->addTab(m_opticalSystemEditor, "Optical System");
-    editorTab->addTab(new QWidget(this), "Optical System Preview");
+    editorTab->addTab(m_opticalSystemPreviewProperties, "Optical System Preview");
     editorTab->addTab(new QWidget(this), "Lens Flare Preview");
 
     // Create the top splitter, which contains the editor and lens flare widgets.

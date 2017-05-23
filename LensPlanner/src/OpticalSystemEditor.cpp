@@ -2,47 +2,60 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 /// List of all the optical system attributes.
-static QVector<OpticalSystemEditorCellData> getOpticalSystemAttributes(OLEF::OpticalSystem& opticalSystem)
+// TODO: these leak!
+QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalSystemAttributes()
 {
     return
     {
+        new AttributeCellString
         {
             "Name",
-            std::bind(&OLEF::OpticalSystem::getName, std::ref(opticalSystem)), 
-            std::bind(&OLEF::OpticalSystem::setName, std::ref(opticalSystem), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystem::getName, std::ref(*m_opticalSystem)), 
+            std::bind(&OLEF::OpticalSystem::setName, std::ref(*m_opticalSystem), std::placeholders::_1),
         },
+        new AttributeCellFloat
         {
             "F-number",
-            std::bind(&OLEF::OpticalSystem::getFnumber, std::ref(opticalSystem)), 
-            std::bind(&OLEF::OpticalSystem::setFnumber, std::ref(opticalSystem), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystem::getFnumber, std::ref(*m_opticalSystem)), 
+            std::bind(&OLEF::OpticalSystem::setFnumber, std::ref(*m_opticalSystem), std::placeholders::_1),
             0.0f,
             64.0f,
         },
+        new AttributeCellFloat
         {
             "Focal Length",
-            std::bind(&OLEF::OpticalSystem::getEffectiveFocalLength, std::ref(opticalSystem)), 
-            std::bind(&OLEF::OpticalSystem::setEffectiveFocalLength, std::ref(opticalSystem), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystem::getEffectiveFocalLength, std::ref(*m_opticalSystem)), 
+            std::bind(&OLEF::OpticalSystem::setEffectiveFocalLength, std::ref(*m_opticalSystem), std::placeholders::_1),
             0.0f,
             500.0f,
         },
+        new AttributeCellFloat
         {
             "Field of View", 
-            std::bind(&OLEF::OpticalSystem::getFieldOfView, std::ref(opticalSystem)), 
-            std::bind(&OLEF::OpticalSystem::setFieldOfView, std::ref(opticalSystem), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystem::getFieldOfView, std::ref(*m_opticalSystem)), 
+            std::bind(&OLEF::OpticalSystem::setFieldOfView, std::ref(*m_opticalSystem), std::placeholders::_1),
             0.0f,
             180.0f
         },
+        new AttributeCellFloat
         {
             "Film Width",
-            std::bind(&OLEF::OpticalSystem::getFilmWidth, std::ref(opticalSystem)), 
-            std::bind(&OLEF::OpticalSystem::setFilmWidth, std::ref(opticalSystem), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystem::getFilmWidth, std::ref(*m_opticalSystem)), 
+            std::bind(&OLEF::OpticalSystem::setFilmWidth, std::ref(*m_opticalSystem), std::placeholders::_1),
             0.0f,
             200.0f,
         },
+        new AttributeCellFloat
         {
             "Film Height",
-            std::bind(&OLEF::OpticalSystem::getFilmHeight, std::ref(opticalSystem)), 
-            std::bind(&OLEF::OpticalSystem::setFilmHeight, std::ref(opticalSystem), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystem::getFilmHeight, std::ref(*m_opticalSystem)), 
+            std::bind(&OLEF::OpticalSystem::setFilmHeight, std::ref(*m_opticalSystem), std::placeholders::_1),
             0.0f,
             200.0f,
         },
@@ -51,308 +64,106 @@ static QVector<OpticalSystemEditorCellData> getOpticalSystemAttributes(OLEF::Opt
 
 ////////////////////////////////////////////////////////////////////////////////
 /// List of all the optical element attributes.
-static QVector<OpticalSystemEditorCellData> getOpticalElementAttributes(OLEF::OpticalSystemElement& element)
+// TODO: these leak!
+QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalElementAttributes(int elemId)
 {
+    auto* element = &((*m_opticalSystem)[elemId]);
     return
     {
+        new AttributeCellElementType
         { 
             "Type",
-            std::bind(&OLEF::OpticalSystemElement::getType, std::ref(element)),
-            std::bind(&OLEF::OpticalSystemElement::setType, std::ref(element), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystemElement::getType, std::ref(*element)),
+            std::bind(&OLEF::OpticalSystemElement::setType, std::ref(*element), std::placeholders::_1),
         },
+        new AttributeCellFloat
         {
             "Height",
-            std::bind(&OLEF::OpticalSystemElement::getHeight, std::ref(element)),
-            std::bind(&OLEF::OpticalSystemElement::setHeight, std::ref(element), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystemElement::getHeight, std::ref(*element)),
+            std::bind(&OLEF::OpticalSystemElement::setHeight, std::ref(*element), std::placeholders::_1),
             0.0f,
             1000.0f,
         },
+        new AttributeCellFloat
         {
             "Thickness",
-            std::bind(&OLEF::OpticalSystemElement::getThickness, std::ref(element)),
-            std::bind(&OLEF::OpticalSystemElement::setThickness, std::ref(element), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystemElement::getThickness, std::ref(*element)),
+            std::bind(&OLEF::OpticalSystemElement::setThickness, std::ref(*element), std::placeholders::_1),
             0.0f,
             1000.0f,
         },
+        new AttributeCellFloat
         {
             "Radius",
-            std::bind(&OLEF::OpticalSystemElement::getRadiusOfCurvature, std::ref(element)),
-            std::bind(&OLEF::OpticalSystemElement::setRadiusOfCurvature, std::ref(element), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystemElement::getRadiusOfCurvature, std::ref(*element)),
+            std::bind(&OLEF::OpticalSystemElement::setRadiusOfCurvature, std::ref(*element), std::placeholders::_1),
             -10000,
             10000,
         },
+        new AttributeCellFloat
         {
             "Refractive Index",
-            std::bind(&OLEF::OpticalSystemElement::getIndexOfRefraction, std::ref(element)),
-            std::bind(&OLEF::OpticalSystemElement::setIndexOfRefraction, std::ref(element), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystemElement::getIndexOfRefraction, std::ref(*element)),
+            std::bind(&OLEF::OpticalSystemElement::setIndexOfRefraction, std::ref(*element), std::placeholders::_1),
             0.0f,
             10.0f,
         },
+        new AttributeCellFloat
         {
             "Abbe Number",
-            std::bind(&OLEF::OpticalSystemElement::getAbbeNumber, std::ref(element)),
-            std::bind(&OLEF::OpticalSystemElement::setAbbeNumber, std::ref(element), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystemElement::getAbbeNumber, std::ref(*element)),
+            std::bind(&OLEF::OpticalSystemElement::setAbbeNumber, std::ref(*element), std::placeholders::_1),
             0.0f,
             1000.0f,
         },
+        new AttributeCellFloat
         {
             "Coating Wavelength",
-            std::bind(&OLEF::OpticalSystemElement::getCoatingLambda, std::ref(element)),
-            std::bind(&OLEF::OpticalSystemElement::setCoatingLambda, std::ref(element), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystemElement::getCoatingLambda, std::ref(*element)),
+            std::bind(&OLEF::OpticalSystemElement::setCoatingLambda, std::ref(*element), std::placeholders::_1),
             0.0f,
             1000.0f,
         },
+        new AttributeCellFloat
         {
             "Coating Refractive Index",
-            std::bind(&OLEF::OpticalSystemElement::getCoatingIor, std::ref(element)),
-            std::bind(&OLEF::OpticalSystemElement::setCoatingIor, std::ref(element), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystemElement::getCoatingIor, std::ref(*element)),
+            std::bind(&OLEF::OpticalSystemElement::setCoatingIor, std::ref(*element), std::placeholders::_1),
             0.0f,
             10.0f
         },
+        new AttributeCellTexture
         {
             "Mask Texture",
-            std::bind(&OLEF::OpticalSystemElement::getTexture, std::ref(element)),
-            std::bind(&OLEF::OpticalSystemElement::setTexture, std::ref(element), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystemElement::getTexture, std::ref(*element)),
+            std::bind(&OLEF::OpticalSystemElement::setTexture, std::ref(*element), std::placeholders::_1),
+            m_imageLibrary,
         },
+        new AttributeCellTexture
         {
             "Mask Texture FT",
-            std::bind(&OLEF::OpticalSystemElement::getTextureFT, std::ref(element)),
-            std::bind(&OLEF::OpticalSystemElement::setTextureFT, std::ref(element), std::placeholders::_1),
+            "",
+            std::bind(&OLEF::OpticalSystemElement::getTextureFT, std::ref(*element)),
+            std::bind(&OLEF::OpticalSystemElement::setTextureFT, std::ref(*element), std::placeholders::_1),
+            m_imageLibrary,
         },
     };
 }
 
-/// Textual representation of all the element types.
-const QStringList s_elemTypes =
-{
-    "Lens (Spherical)",
-    "Lens (Aspherical)",
-    "Aperture",
-    "Sensor"
-};
-
 ////////////////////////////////////////////////////////////////////////////////
-OpticalSystemEditorDelegate::OpticalSystemEditorDelegate(ImageLibrary* imgLib,
-    QWidget* parent): 
-        QStyledItemDelegate(parent),
-        m_imageLibrary(imgLib)
-{}
-
-////////////////////////////////////////////////////////////////////////////////
-QWidget* OpticalSystemEditorDelegate::createEditor(QWidget* parent, 
-    const QStyleOptionViewItem& option, const QModelIndex& index) const
-{
-    const auto& data = index.data(Qt::UserRole + 1);
-    if (data.canConvert<OpticalSystemEditorCellData>())
-    {
-        // Extract the editor data
-        OpticalSystemEditorCellData cellData = 
-            qvariant_cast<OpticalSystemEditorCellData>(data);
-
-        // Switch on its type
-        switch (cellData.m_type)
-        {
-        // Element type
-        case OpticalSystemEditorCellData::TYPE:
-        {
-            QComboBox* comboBox = new QComboBox(parent);
-            comboBox->addItems(s_elemTypes);
-
-            return comboBox;
-        }
-
-        // Float value
-        case OpticalSystemEditorCellData::FLOAT:
-        {
-            QDoubleSpinBox* spinBox = new QDoubleSpinBox(parent);
-            spinBox->setMinimum(cellData.m_min);
-            spinBox->setMaximum(cellData.m_max);
-            //spinBox->setFrame(false);
-            
-            return spinBox;
-        }
-
-        // String value
-        case OpticalSystemEditorCellData::STRING:
-        {
-            QLineEdit* lineEdit = new QLineEdit(parent);
-            
-            return lineEdit;
-        }
-        break;
-
-        // Texture value
-        case OpticalSystemEditorCellData::TEXTURE:
-        {
-            QWidget* widget = new QWidget(parent);
-            
-            QLineEdit* lineEdit = new QLineEdit(widget);
-            lineEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-            lineEdit->setReadOnly(true);
-            QPushButton* browseButton = new QPushButton("...", widget);
-            browseButton->resize(1, browseButton->height());
-            browseButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-            connect(browseButton, &QPushButton::pressed, [=]()
-            {
-                auto filePath = m_imageLibrary->loadImageDialog(widget, "Load " + cellData.m_name);
-                lineEdit->setText(filePath);
-            });
-
-            QHBoxLayout* layout = new QHBoxLayout(widget);
-            layout->setContentsMargins(0, 0, 0, 0);
-            layout->setSpacing(0);
-            layout->addWidget(lineEdit);
-            layout->addWidget(browseButton);
-            widget->setLayout(layout);
-            browseButton->resize(16, browseButton->height());
-
-            return widget;
-        }
-        break;
-        }
-
-        return QStyledItemDelegate::createEditor(parent, option, index);
-    }
-    else
-    {
-        return QStyledItemDelegate::createEditor(parent, option, index);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void OpticalSystemEditorDelegate::setEditorData(QWidget* editor, 
-    const QModelIndex& index) const
-{
-    const auto& data = index.data(Qt::UserRole + 1);
-    if (data.canConvert<OpticalSystemEditorCellData>())
-    {
-        OpticalSystemEditorCellData cellData = 
-            qvariant_cast<OpticalSystemEditorCellData>(data);
-
-        // Switch on its type
-        switch (cellData.m_type)
-        {
-        // Element type
-        case OpticalSystemEditorCellData::TYPE:
-        {
-            OLEF::OpticalSystemElement::ElementType elemType = 
-                cellData.m_typeGetter();
-
-            QComboBox* comboBox = (QComboBox*) editor;
-            comboBox->setCurrentIndex((int) elemType);
-        }
-        break;
-
-        // Float value
-        case OpticalSystemEditorCellData::FLOAT:
-        {
-            float value = cellData.m_floatGetter();
-
-            QDoubleSpinBox* spinBox = (QDoubleSpinBox*) editor;
-            spinBox->setValue(value);
-        }
-        break;
-
-        // String value
-        case OpticalSystemEditorCellData::STRING:
-        {
-            const std::string& value = cellData.m_stringGetter();
-
-            QLineEdit* lineEdit = (QLineEdit*) editor;
-            lineEdit->setText(QString::fromStdString(value));
-        }
-        break;
-
-        // Texture value
-        case OpticalSystemEditorCellData::TEXTURE:
-        {
-            GLuint value = cellData.m_textureGetter();
-
-            QLineEdit* lineEdit = (QLineEdit*) (editor->layout()->itemAt(0)->widget());
-            lineEdit->setText(m_imageLibrary->lookUpTextureName(value));
-        }
-        break;
-        }
-    }
-    else
-    {
-        QStyledItemDelegate::setEditorData(editor, index);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void OpticalSystemEditorDelegate::setModelData(QWidget* editor, 
-    QAbstractItemModel* model, const QModelIndex& index) const
-{
-    const auto& data = index.data(Qt::UserRole + 1);
-    if (data.canConvert<OpticalSystemEditorCellData>())
-    {
-        OpticalSystemEditorCellData cellData = 
-            qvariant_cast<OpticalSystemEditorCellData>(data);
-
-        // Switch on its type
-        switch (cellData.m_type)
-        {
-        // Element type
-        case OpticalSystemEditorCellData::TYPE:
-        {
-            QComboBox* comboBox = (QComboBox*) editor;
-            int current = comboBox->currentIndex();
-            OLEF::OpticalSystemElement::ElementType elemType = 
-                (OLEF::OpticalSystemElement::ElementType) current;
-
-            cellData.m_typeSetter(elemType);
-            model->setData(index, s_elemTypes[current], Qt::EditRole);
-        }
-        break;
-
-        // Float value
-        case OpticalSystemEditorCellData::FLOAT:
-        {
-            QDoubleSpinBox* spinBox = (QDoubleSpinBox*) editor;
-            float value = spinBox->value();
-
-            cellData.m_floatSetter(value);
-            model->setData(index, value, Qt::EditRole);
-        }
-        break;
-
-        // String value
-        case OpticalSystemEditorCellData::STRING:
-        {
-            QLineEdit* lineEdit = (QLineEdit*) editor;
-            QString value = lineEdit->text();
-
-            cellData.m_stringSetter(value.toStdString());
-            model->setData(index, value, Qt::EditRole);
-        }
-        break;
-
-        // Texture value
-        case OpticalSystemEditorCellData::TEXTURE:
-        {
-            QLineEdit* lineEdit = (QLineEdit*) (editor->layout()->itemAt(0)->widget());
-            QString value = lineEdit->text();
-            QFileInfo fileInfo(value);
-
-            cellData.m_textureSetter(m_imageLibrary->uploadTexture(value));
-            model->setData(index, fileInfo.fileName(), Qt::EditRole);
-        }
-        break;
-        }
-    }
-    else
-    {
-        QStyledItemDelegate::setModelData(editor, model, index);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-OpticalSystemEditor::OpticalSystemEditor(ImageLibrary* imageLibrary,
-    OLEF::OpticalSystem* system, QWidget* parent):
-        QWidget(parent),
-        m_imageLibrary(imageLibrary),
-        m_opticalSystem(system)
+OpticalSystemEditor::OpticalSystemEditor(ImageLibrary* imageLibrary, OLEF::OpticalSystem* system, QWidget* parent):
+    QWidget(parent),
+    m_imageLibrary(imageLibrary),
+    m_opticalSystem(system)
 {    
     // Setup the UI
     createToolBar();
@@ -371,51 +182,15 @@ OpticalSystemEditor::~OpticalSystemEditor()
 {}
 
 ////////////////////////////////////////////////////////////////////////////////
-void OpticalSystemEditor::updateTreeAttribute(QStandardItem* item, OpticalSystemEditorCellData attrib)
+void OpticalSystemEditor::updateTreeAttribute(AttributeCellWidgetBase* attrib,
+        QStandardItem* name, QStandardItem* value)
 {
-    // Store the cell data
-    QVariant data;
-    data.setValue(attrib);
-    item->setData(data, Qt::UserRole + 1);
-
-    // Set its current value
-    switch (attrib.m_type)
-    {
-    // Element type
-    case OpticalSystemEditorCellData::TYPE:
-    {
-        OLEF::OpticalSystemElement::ElementType elemType = attrib.m_typeGetter();
-        item->setData(s_elemTypes[(int) elemType], Qt::EditRole);
-    }
-    break;
-
-    // Float value
-    case OpticalSystemEditorCellData::FLOAT:
-    {
-        float floatVal = attrib.m_floatGetter();
-        item->setData(floatVal, Qt::EditRole);
-    }
-    break;
-
-    // String value
-    case OpticalSystemEditorCellData::STRING:
-    {
-        const std::string& stringVal = attrib.m_stringGetter();
-        item->setData(QString::fromStdString(stringVal), Qt::EditRole);
-    }
-    break;
-
-    // Texture value
-    case OpticalSystemEditorCellData::TEXTURE:
-    {
-        GLuint value = attrib.m_textureGetter();
-        QFileInfo fileInfo(m_imageLibrary->lookUpTextureName(value));
-        item->setData(fileInfo.fileName(), Qt::EditRole);
-    }
-    break;
-    }
+    value->setData(QVariant::fromValue(attrib), Qt::UserRole + 1);
+    attrib->refreshName(name->model(), name->index());
+    attrib->refreshView(value->model(), value->index());
 }
 
+////////////////////////////////////////////////////////////////////////////////
 void OpticalSystemEditor::update()
 {
     /// Extract the root item
@@ -425,11 +200,13 @@ void OpticalSystemEditor::update()
     QStandardItem* attributesHeader = root->child(0);
 
     // Refresh the system attributes
-    const auto& systemAttributes = getOpticalSystemAttributes(*m_opticalSystem);
+    const auto& systemAttributes = getOpticalSystemAttributes();
     for (int attribId = 0; attribId < systemAttributes.size(); ++attribId)
     {
-        updateTreeAttribute(attributesHeader->child(attribId, 1), 
-            systemAttributes[attribId]);
+        updateTreeAttribute(
+            systemAttributes[attribId],
+            attributesHeader->child(attribId, 0),
+            attributesHeader->child(attribId, 1));
     }
 
     // Refresh the elements
@@ -440,13 +217,12 @@ void OpticalSystemEditor::update()
         header->setText(QString("Element #%0").arg(elemId + 1));
 
         // Add the attributes.
-        const auto& lensAttributes = 
-            getOpticalElementAttributes((*m_opticalSystem)[elemId]);
-
+        const auto& lensAttributes = getOpticalElementAttributes(elemId);
         for (int attribId = 0; attribId < lensAttributes.size(); ++attribId)
         {
-            updateTreeAttribute(header->child(attribId, 1), 
-                lensAttributes[attribId]);
+            updateTreeAttribute(lensAttributes[attribId],
+                header->child(attribId, 0),
+                header->child(attribId, 1));
         }
     }
 
@@ -766,38 +542,13 @@ void OpticalSystemEditor::createTreeAttributes()
     root->appendRow({ attributesHeader, attributesEmpty });
 
     // Add the attributes.
-    const auto& systemAttributes = getOpticalSystemAttributes(*m_opticalSystem);
+    const auto& systemAttributes = getOpticalSystemAttributes();
     for (auto attrib: systemAttributes)
     {
         // Create the name item
-        QStandardItem* name = new QStandardItem(attrib.m_name);
-        name->setEditable(false);
-
-        // Create the value item
+        QStandardItem* name = new QStandardItem();
         QStandardItem* value = new QStandardItem();
-        QVariant data;
-        data.setValue(attrib);
-        value->setData(data, Qt::UserRole + 1);
-
-        // Set its current value
-        switch (attrib.m_type)
-        {
-        // Element type
-        case OpticalSystemEditorCellData::TYPE:
-        {
-            OLEF::OpticalSystemElement::ElementType elemType = attrib.m_typeGetter();
-            value->setData(s_elemTypes[(int) elemType], Qt::EditRole);
-        }
-        break;
-
-        // Float value
-        case OpticalSystemEditorCellData::FLOAT:
-        {
-            float floatVal = attrib.m_floatGetter();
-            value->setData(floatVal, Qt::EditRole);
-        }
-        break;
-        }
+        name->setEditable(false);
 
         // Append the row
         attributesHeader->appendRow({ name, value });
@@ -812,20 +563,17 @@ void OpticalSystemEditor::createTreeItem(int elemId)
 
     // Append the lens element header
     QStandardItem* elementEmpty = new QStandardItem();
-    QStandardItem* elementHeader = 
-        new QStandardItem(QString("Element #%0").arg(elemId + 1));
+    QStandardItem* elementHeader = new QStandardItem();
     elementEmpty->setEditable(false);
     elementHeader->setEditable(false);
     root->insertRow(elemId + 1, { elementHeader, elementEmpty });
 
     // Add the attributes.
-    const auto& lensAttributes = 
-        getOpticalElementAttributes((*m_opticalSystem)[elemId]);
-
+    const auto& lensAttributes = getOpticalElementAttributes(elemId);
     for (auto attrib: lensAttributes)
     {
         // Create the name and value items
-        QStandardItem* name = new QStandardItem(attrib.m_name);
+        QStandardItem* name = new QStandardItem();
         QStandardItem* value = new QStandardItem();
         name->setEditable(false);
 
@@ -854,7 +602,7 @@ void OpticalSystemEditor::createTree()
     // Create the view
     m_tree = new QTreeView(this);
     m_tree->setModel(m_treeModel);
-    m_tree->setItemDelegate(new OpticalSystemEditorDelegate(m_imageLibrary, this));
+    m_tree->setItemDelegate(new AttributeCellDelegate(this));
     m_tree->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_tree->setEditTriggers(QAbstractItemView::CurrentChanged);
     m_tree->expandAll();

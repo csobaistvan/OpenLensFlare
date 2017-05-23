@@ -4,6 +4,9 @@
 #include "OpticalSystemEditor.h"
 #include "OpticalSystemPreviewer.h"
 #include "LensFlarePreviewer.h"
+#include "OpticalSystemPreviewProperties.h"
+#include "LensFlarePreviewProperties.h"
+#include "OpticalSystemSerializer.h"
 
 #include <QMainWindow>
 
@@ -43,4 +46,10 @@ private:
 
     /// Pointer to the lens flare previewer object.
     LensFlarePreviewer* m_lensFlarePreviewer;
+
+    /// Editor object for the optical system preview options.
+    OpticalSystemPreviewProperties* m_opticalSystemPreviewProperties;
+
+    /// Editor object for the lens flare preview options.
+    //LensFlarePreviewProperties* m_ensFlarePreviewProperties;
 };
