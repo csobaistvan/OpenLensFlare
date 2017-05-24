@@ -22,6 +22,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalSystemAttribute
             std::bind(&OLEF::OpticalSystem::setFnumber, std::ref(*m_opticalSystem), std::placeholders::_1),
             0.0f,
             64.0f,
+            1.0f,
         },
         new AttributeCellFloat
         {
@@ -31,6 +32,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalSystemAttribute
             std::bind(&OLEF::OpticalSystem::setEffectiveFocalLength, std::ref(*m_opticalSystem), std::placeholders::_1),
             0.0f,
             500.0f,
+            1.0f,
         },
         new AttributeCellFloat
         {
@@ -39,7 +41,8 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalSystemAttribute
             std::bind(&OLEF::OpticalSystem::getFieldOfView, std::ref(*m_opticalSystem)), 
             std::bind(&OLEF::OpticalSystem::setFieldOfView, std::ref(*m_opticalSystem), std::placeholders::_1),
             0.0f,
-            180.0f
+            180.0f,
+            1.0f,
         },
         new AttributeCellFloat
         {
@@ -49,6 +52,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalSystemAttribute
             std::bind(&OLEF::OpticalSystem::setFilmWidth, std::ref(*m_opticalSystem), std::placeholders::_1),
             0.0f,
             200.0f,
+            1.0f,
         },
         new AttributeCellFloat
         {
@@ -58,6 +62,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalSystemAttribute
             std::bind(&OLEF::OpticalSystem::setFilmHeight, std::ref(*m_opticalSystem), std::placeholders::_1),
             0.0f,
             200.0f,
+            1.0f,
         },
     };
 }
@@ -76,6 +81,12 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalElementAttribut
             "",
             std::bind(&OLEF::OpticalSystemElement::getType, std::ref(*element)),
             std::bind(&OLEF::OpticalSystemElement::setType, std::ref(*element), std::placeholders::_1),
+            {
+                "Lens (Spherical)",
+                "Lens (Aspherical)",
+                "Aperture",
+                "Sensor"
+            },
         },
         new AttributeCellFloat
         {
@@ -85,6 +96,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalElementAttribut
             std::bind(&OLEF::OpticalSystemElement::setHeight, std::ref(*element), std::placeholders::_1),
             0.0f,
             1000.0f,
+            1.0f,
         },
         new AttributeCellFloat
         {
@@ -94,6 +106,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalElementAttribut
             std::bind(&OLEF::OpticalSystemElement::setThickness, std::ref(*element), std::placeholders::_1),
             0.0f,
             1000.0f,
+            1.0f,
         },
         new AttributeCellFloat
         {
@@ -103,6 +116,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalElementAttribut
             std::bind(&OLEF::OpticalSystemElement::setRadiusOfCurvature, std::ref(*element), std::placeholders::_1),
             -10000,
             10000,
+            1.0f,
         },
         new AttributeCellFloat
         {
@@ -112,6 +126,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalElementAttribut
             std::bind(&OLEF::OpticalSystemElement::setIndexOfRefraction, std::ref(*element), std::placeholders::_1),
             0.0f,
             10.0f,
+            0.1f,
         },
         new AttributeCellFloat
         {
@@ -121,6 +136,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalElementAttribut
             std::bind(&OLEF::OpticalSystemElement::setAbbeNumber, std::ref(*element), std::placeholders::_1),
             0.0f,
             1000.0f,
+            0.1f,
         },
         new AttributeCellFloat
         {
@@ -130,6 +146,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalElementAttribut
             std::bind(&OLEF::OpticalSystemElement::setCoatingLambda, std::ref(*element), std::placeholders::_1),
             0.0f,
             1000.0f,
+            1.0f,
         },
         new AttributeCellFloat
         {
@@ -138,7 +155,8 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalElementAttribut
             std::bind(&OLEF::OpticalSystemElement::getCoatingIor, std::ref(*element)),
             std::bind(&OLEF::OpticalSystemElement::setCoatingIor, std::ref(*element), std::placeholders::_1),
             0.0f,
-            10.0f
+            10.0f,
+            0.1f,
         },
         new AttributeCellTexture
         {

@@ -51,5 +51,5 @@ private:
     OpticalSystemPreviewProperties* m_opticalSystemPreviewProperties;
 
     /// Editor object for the lens flare preview options.
-    //LensFlarePreviewProperties* m_ensFlarePreviewProperties;
+    LensFlarePreviewProperties* m_lensFlarePreviewProperties;
 };

@@ -15,8 +15,8 @@ LensFlarePreviewer::LensFlarePreviewer(OLEF::OpticalSystem* system, QWidget* par
     m_prevMouse{ -1, -1 },
     m_opticalSystem(system),
     m_ghosts(system),
-    m_starburst(nullptr),
-    m_ghost(nullptr),
+    m_starburstAlgorithm(nullptr),
+    m_ghostAlgorithm(nullptr),
     m_imageLibrary(new ImageLibrary(this, this))
 {
     // Initialize the GL format
@@ -51,15 +51,15 @@ LensFlarePreviewer::~LensFlarePreviewer()
     glewInit();
 
     // Release the starburst renderer object.
-    if (m_starburst)
+    if (m_starburstAlgorithm)
     {
-        delete m_starburst;
+        delete m_starburstAlgorithm;
     }
 
     // Release the ghost renderer object.
-    if (m_ghost)
+    if (m_ghostAlgorithm)
     {
-        delete m_ghost;
+        delete m_ghostAlgorithm;
     }
 
     // Release the created textures
@@ -80,7 +80,7 @@ void LensFlarePreviewer::opticalSystemChanged()
 {
     // There is only one ghost algorithm right now, so this is safe
     OLEF::RayTraceGhostAlgorithm* ghost =
-        (OLEF::RayTraceGhostAlgorithm*) m_ghost;
+        (OLEF::RayTraceGhostAlgorithm*) m_ghostAlgorithm;
 
     // Refresh the ghost list.
     m_ghosts = OLEF::GhostList(m_opticalSystem);
@@ -88,24 +88,6 @@ void LensFlarePreviewer::opticalSystemChanged()
 
     // Regenerate the image
     update();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-ImageLibrary* LensFlarePreviewer::getImageLibrary() const
-{
-    return m_imageLibrary;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-OLEF::StarburstAlgorithm* LensFlarePreviewer::getStarburstAlgorithm() const
-{
-    return m_starburst;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-OLEF::GhostAlgorithm* LensFlarePreviewer::getGhostAlgorithm() const
-{
-    return m_ghost;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -158,8 +140,6 @@ QImage LensFlarePreviewer::loadTexture(GLuint texture)
     
 	// Allocate memory for the pixels
 	GLubyte* pixels = new GLubyte[w * h * 4];
-
-    qDebug() << w << h;
 
 	// Extract the image
 	f->glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -216,21 +196,31 @@ void LensFlarePreviewer::mouseMoveEvent(QMouseEvent* event)
         m_lightPolar[1] += dy * glm::radians(0.5f);
 
         // Update the light angle
+        /*
         m_lightSource.setIncidenceDirection(glm::vec3(
             glm::cos(m_lightPolar[0]) * glm::sin(m_lightPolar[1]), 
             glm::cos(m_lightPolar[1]),
             glm::sin(m_lightPolar[0]) * glm::sin(m_lightPolar[1])));
+        */
 
         // Update the view
         update();
     }
 }
+    
+////////////////////////////////////////////////////////////////////////////////
+void LensFlarePreviewer::wheelEvent(QWheelEvent* event)
+{}
 
 ////////////////////////////////////////////////////////////////////////////////
 void LensFlarePreviewer::initializeGL()
 {
     // Init glew for OpenLensFlare to work.
     glewInit();
+
+    //TODO: the objects are initialized here, to make sure the proper objects
+    //      are created within the proper context. Find a way to safely extract
+    //      these objects into the MainWindow instance, and manage them from there
 
     // Create the starburst renderer.
     OLEF::DiffractionStarburstAlgorithm* diffStarburst = 
@@ -242,14 +232,14 @@ void LensFlarePreviewer::initializeGL()
         new OLEF::RayTraceGhostAlgorithm(m_opticalSystem, m_ghosts);
 
     // Initialize the light source.
-    m_lightSource.setScreenPosition(glm::vec2(0.0f));
-    m_lightSource.setIncidenceDirection(glm::vec3(0.0f, 0.0f, 1.0f));
-    m_lightSource.setDiffuseColor(glm::vec3(1.0f));
-    m_lightSource.setDiffuseIntensity(1.0f);
+    //m_lightSource.setScreenPosition(glm::vec2(0.0f));
+    //m_lightSource.setIncidenceDirection(glm::vec3(0.0f, 0.0f, 1.0f));
+    //m_lightSource.setDiffuseColor(glm::vec3(1.0f));
+    //m_lightSource.setDiffuseIntensity(1.0f);
     
     // Store the created objects.
-    m_starburst = diffStarburst;
-    m_ghost = rayTraceGhost;
+    m_starburstAlgorithm = diffStarburst;
+    m_ghostAlgorithm = rayTraceGhost;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -271,6 +261,6 @@ void LensFlarePreviewer::paintGL()
     f->glClear(GL_COLOR_BUFFER_BIT);
 
     // Render the starburst
-    m_starburst->renderStarburst(m_lightSource);
-    m_ghost->renderAllGhosts(m_lightSource);
+    //m_starburstAlgorithm->renderStarburst(m_lightSource);
+    //m_ghostAlgorithm->renderAllGhosts(m_lightSource);
 }

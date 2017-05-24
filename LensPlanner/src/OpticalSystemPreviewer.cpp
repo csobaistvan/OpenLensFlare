@@ -576,7 +576,7 @@ void OpticalSystemPreviewer::paintGL()
         m_backgroundColor.blueF(), m_backgroundColor.alphaF());
     f->glClear(GL_COLOR_BUFFER_BIT);
     f->glDisable(GL_BLEND);
-    f->glEnable(GL_LINE_SMOOTH);
+    //f->glEnable(GL_LINE_SMOOTH);
 
     /// Check if we need to generate new geometry.
     if (m_generateSystemGeometry || m_generateRayGeometry)

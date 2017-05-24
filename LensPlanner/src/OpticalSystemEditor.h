@@ -4,6 +4,9 @@
 #include "AttributeCellWidgets.h"
 
 /// The optical system editor widget.
+///
+/// TODO: the underlying tree structure is duplicated (currently) 3 times - 
+/// consider extracting it somehow.
 class OpticalSystemEditor: public QWidget
 {
     Q_OBJECT;

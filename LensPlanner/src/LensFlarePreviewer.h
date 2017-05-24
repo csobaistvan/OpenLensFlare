@@ -12,14 +12,13 @@ public:
     explicit LensFlarePreviewer(OLEF::OpticalSystem* system, QWidget* parent = nullptr);
     ~LensFlarePreviewer();
 
-    /// Returns the object's image library.
-    ImageLibrary* getImageLibrary() const;
-
-    /// The algorithm to render the starburst.
-    OLEF::StarburstAlgorithm* getStarburstAlgorithm() const;
-
-    /// The algorithm to render ghosts.
-    OLEF::GhostAlgorithm* getGhostAlgorithm() const;
+    // Getters and setters for the visualization attributes
+    ImageLibrary* getImageLibrary() const { return m_imageLibrary; }
+    OLEF::StarburstAlgorithm* getStarburstAlgorithm() const { return m_starburstAlgorithm; }
+    OLEF::GhostAlgorithm* getGhostAlgorithm() const { return m_ghostAlgorithm; }
+    const QVector<OLEF::LightSource>& getLightSources() const { return m_lightSources; }
+    
+    void setLightSources(const QVector<OLEF::LightSource>& value) { m_lightSources = value; }
 
     /// TextureAccessor interface
     GLuint uploadTexture(const QImage& image);
@@ -37,36 +36,37 @@ public:
     /// QWidget events.
     void mouseMoveEvent(QMouseEvent* event);
     void mousePressEvent(QMouseEvent* event);
+    void wheelEvent(QWheelEvent* event);
 
 public slots:
     /// Slot, used to indicate that the underlying optical system changed.
     void opticalSystemChanged();
 
 private:
+    /// The optical system to use with the algorithms.
+    OLEF::OpticalSystem* m_opticalSystem;
+
     /// The image library that manages our textures.
     ImageLibrary* m_imageLibrary;
 
-    /// Light polar coordinates
-    std::array<float, 2> m_lightPolar;
+    /// The algorithm to render the starburst.
+    OLEF::StarburstAlgorithm* m_starburstAlgorithm;
+
+    /// The algorithm to render ghosts.
+    OLEF::GhostAlgorithm* m_ghostAlgorithm;
 
     // Previous mouse coordinates.
     std::array<int, 2> m_prevMouse;
 
-    /// The optical system to use with the algorithms.
-    OLEF::OpticalSystem* m_opticalSystem;
+    /// Light source polar coordinates
+    std::array<float, 2> m_lightPolar;
 
-    /// The algorithm to render the starburst.
-    OLEF::StarburstAlgorithm* m_starburst;
-
-    /// The algorithm to render ghosts.
-    OLEF::GhostAlgorithm* m_ghost;
-
-    /// The light source object used for previewing.
-    OLEF::LightSource m_lightSource;
+    /// Color of the background.
+    QColor m_backgroundColor;
 
     /// Ghosts to render.
     OLEF::GhostList m_ghosts;
 
-    /// Color of the background.
-    QColor m_backgroundColor;
+    /// The list of light source objects used for previewing.
+    QVector<OLEF::LightSource> m_lightSources;
 };

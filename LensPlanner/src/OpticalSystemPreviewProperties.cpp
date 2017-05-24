@@ -29,6 +29,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getGlobalAttri
             std::bind(&OpticalSystemPreviewer::setIrisLineWidth, std::ref(*m_previewer), std::placeholders::_1),
             1.0f,
             32.0f,
+            1.0f,
         },
         new AttributeCellColor
         {
@@ -45,6 +46,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getGlobalAttri
             std::bind(&OpticalSystemPreviewer::setLensLineWidth, std::ref(*m_previewer), std::placeholders::_1),
             1.0f,
             32.0f,
+            1.0f,
         },
         new AttributeCellColor
         {
@@ -61,6 +63,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getGlobalAttri
             std::bind(&OpticalSystemPreviewer::setAxisLineWidth, std::ref(*m_previewer), std::placeholders::_1),
             1.0f,
             32.0f,
+            1.0f,
         },
         new AttributeCellInt
         {
@@ -70,6 +73,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getGlobalAttri
             std::bind(&OpticalSystemPreviewer::setLensResolution, std::ref(*m_previewer), std::placeholders::_1),
             1,
             128,
+            1,
         },
     };
 }
@@ -88,6 +92,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
             &m_batches[batchId].m_firstGhost,
             1,
             1000,
+            1,
         },
         new AttributeCellInt
         {
@@ -96,6 +101,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
             &m_batches[batchId].m_numGhosts,
             0,
             1000,
+            1,
         },
         new AttributeCellInt
         {
@@ -104,6 +110,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
             &m_batches[batchId].m_numReflections,
             0,
             10,
+            1,
         },
         new AttributeCellColor
         {
@@ -118,6 +125,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
             &m_batches[batchId].m_lineWidth,
             1.0f,
             32.0f,
+            1.0f,
         },
         new AttributeCellInt
         {
@@ -126,6 +134,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
             &m_batches[batchId].m_rayCount,
             1,
             256,
+            1,
         },
         new AttributeCellFloat
         {
@@ -134,6 +143,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
             &m_batches[batchId].m_startDistance,
             0,
             1000.0f,
+            1.0f,
         },
         new AttributeCellFloat
         {
@@ -142,6 +152,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
             &m_batches[batchId].m_startHeight,
             -1000.0f,
             1000.0f,
+            1.0f,
         },
         new AttributeCellFloat
         {
@@ -150,6 +161,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
             &m_batches[batchId].m_endHeight,
             -1000.0f,
             1000.0f,
+            1.0f,
         },
         new AttributeCellFloat
         {
@@ -158,6 +170,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
             &m_batches[batchId].m_angle,
             -180.0f,
             180.0f,
+            1.0f,
         },
     };
 }
@@ -167,35 +180,6 @@ OpticalSystemPreviewProperties::OpticalSystemPreviewProperties(OpticalSystemPrev
     QWidget(parent),
     m_previewer(previewer)
 {
-    /*
-    m_batches = 
-    {
-        {
-            0,
-            1,
-            2,
-            QColor(Qt::red),
-            3,
-            10.0f,
-            10.0f,
-            -10.0f,
-            0.0f,
-        },
-        
-        {
-            1,
-            1,
-            2,
-            QColor(Qt::green),
-            3,
-            10.0f,
-            10.0f,
-            -10.0f,
-            0.0f,
-        },
-    };
-    */
-
     // Create the tree and the layout
     createToolBar();
     createTree();

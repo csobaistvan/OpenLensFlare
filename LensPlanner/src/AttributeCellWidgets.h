@@ -86,43 +86,22 @@ struct AttributeCellWidgetTypedBase: public AttributeCellWidgetBase
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-/// The actual attribute cell widget template, without specialization.
-template<typename AttribType, typename... DataTypes>
-struct AttributeCellWidget
-{};
-
-////////////////////////////////////////////////////////////////////////////////
-/// Optical system element type attribute functions.
-template<>
-struct AttributeCellWidget<OLEF::OpticalSystemElement::ElementType>: 
-    public AttributeCellWidgetTypedBase<OLEF::OpticalSystemElement::ElementType>
+/// Enumeration attribute cell type.
+template<typename T>
+struct AttributeCellEnum: public AttributeCellWidgetTypedBase<T, QStringList>
 {
-    /// Textual representation of all the element types.
-    static QStringList typeNames()
-    {
-        static const QStringList s_typeNames =  
-        {
-            "Lens (Spherical)",
-            "Lens (Aspherical)",
-            "Aperture",
-            "Sensor"
-        };
-
-        return s_typeNames;
-    }
-
-    AttributeCellWidget():
+    AttributeCellEnum():
         AttributeCellWidgetTypedBase()
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description, 
-        OLEF::OpticalSystemElement::ElementType* attrib):
-            AttributeCellWidgetTypedBase(name, description, attrib)
+    AttributeCellEnum(const QString& name, const QString& description, 
+        T* attrib, const QStringList& names):
+            AttributeCellWidgetTypedBase(name, description, attrib, names)
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description, 
-        const Getter& getter, const Setter& setter):
-            AttributeCellWidgetTypedBase(name, description, getter, setter)
+    AttributeCellEnum(const QString& name, const QString& description, 
+        const Getter& getter, const Setter& setter, const QStringList& names):
+            AttributeCellWidgetTypedBase(name, description, getter, setter, names)
     {}
 
     // AttributeCellWidgetBase methods
@@ -133,17 +112,18 @@ struct AttributeCellWidget<OLEF::OpticalSystemElement::ElementType>:
 
     void refreshView(QAbstractItemModel* model, const QModelIndex& index) override
     {
-        QString text = typeNames()[(int) m_getter()];
+        const QStringList& names = std::get<0>(m_data);
+        QString text = names[(int) m_getter()];
         model->setData(index, QVariant::fromValue(text), Qt::EditRole);
     }
 
     void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) override
     {
-        const auto& names = typeNames();
+        const QStringList& names = std::get<0>(m_data);
         QString text = qvariant_cast<QString>(model->data(index, Qt::EditRole));
         auto it = std::find(names.constBegin(), names.constEnd(), text);
         int id = (it == names.constEnd()) ? 0 : it - names.constBegin();
-        m_setter((OLEF::OpticalSystemElement::ElementType) id);
+        m_setter((T) id);
     }
 
     void paint(QPainter* painter, const QStyleOptionViewItem& option, 
@@ -154,8 +134,9 @@ struct AttributeCellWidget<OLEF::OpticalSystemElement::ElementType>:
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
         const QModelIndex& index) override
     {
+        const QStringList& names = std::get<0>(m_data);
         QComboBox* comboBox = new QComboBox(parent);
-        comboBox->addItems(typeNames());
+        comboBox->addItems(names);
 
         return comboBox;
     }
@@ -171,39 +152,36 @@ struct AttributeCellWidget<OLEF::OpticalSystemElement::ElementType>:
     void setModelData(QWidget* editor, QAbstractItemModel* model,
         const QModelIndex& index) override
     {
+        const QStringList& names = std::get<0>(m_data);
         QComboBox* comboBox = (QComboBox*) editor;
         int current = comboBox->currentIndex();
-        auto elemType = (OLEF::OpticalSystemElement::ElementType) current;
+        auto elemType = (T) current;
 
         m_setter(elemType);
-        model->setData(index, typeNames()[current], Qt::EditRole);
+        model->setData(index, names[current], Qt::EditRole);
     }
 };
 
-/// Optical system element type attribute data type.
+/// Optical system element type attribute type.
 using AttributeCellElementType = 
-    AttributeCellWidget<OLEF::OpticalSystemElement::ElementType>;
-Q_DECLARE_METATYPE(AttributeCellElementType);
-Q_DECLARE_METATYPE(AttributeCellElementType*);
+    AttributeCellEnum<OLEF::OpticalSystemElement::ElementType>;
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Integer attribute functions.
-template<>
-struct AttributeCellWidget<int, int, int>: 
-    public AttributeCellWidgetTypedBase<int, int, int>
+/// Integer attribute cell type.
+struct AttributeCellInt: public AttributeCellWidgetTypedBase<int, int, int, int>
 {
-    AttributeCellWidget():
+    AttributeCellInt():
         AttributeCellWidgetTypedBase()
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description,
-         int* attrib, int min, int max):
-            AttributeCellWidgetTypedBase(name, description, attrib, min, max)
+    AttributeCellInt(const QString& name, const QString& description,
+         int* attrib, int min, int max, int step):
+            AttributeCellWidgetTypedBase(name, description, attrib, min, max, step)
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description, 
-        const Getter& getter, const Setter& setter, int min, int max):
-            AttributeCellWidgetTypedBase(name, description, getter, setter, min, max)
+    AttributeCellInt(const QString& name, const QString& description, 
+        const Getter& getter, const Setter& setter, int min, int max, int step):
+            AttributeCellWidgetTypedBase(name, description, getter, setter, min, max, step)
     {}
 
     // AttributeCellWidgetBase methods
@@ -233,6 +211,7 @@ struct AttributeCellWidget<int, int, int>:
         QSpinBox* spinBox = new QSpinBox(parent);
         spinBox->setMinimum(std::get<0>(m_data));
         spinBox->setMaximum(std::get<1>(m_data));
+        spinBox->setSingleStep(std::get<2>(m_data));
         
         return spinBox;
     }
@@ -256,30 +235,22 @@ struct AttributeCellWidget<int, int, int>:
     }
 };
 
-/// Integer attribute data type.
-using AttributeCellInt = 
-    AttributeCellWidget<int, int, int>;
-Q_DECLARE_METATYPE(AttributeCellInt);
-Q_DECLARE_METATYPE(AttributeCellInt*);
-
 ////////////////////////////////////////////////////////////////////////////////
-/// Floating point attribute functions.
-template<>
-struct AttributeCellWidget<float, float, float>: 
-    public AttributeCellWidgetTypedBase<float, float, float>
+/// Floating point attribute cell type.
+struct AttributeCellFloat: public AttributeCellWidgetTypedBase<float, float, float, float>
 {
-    AttributeCellWidget():
+    AttributeCellFloat():
         AttributeCellWidgetTypedBase()
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description,
-         float* attrib, float min, float max):
-            AttributeCellWidgetTypedBase(name, description, attrib, min, max)
+    AttributeCellFloat(const QString& name, const QString& description,
+         float* attrib, float min, float max, float step):
+            AttributeCellWidgetTypedBase(name, description, attrib, min, max, step)
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description, 
-        const Getter& getter, const Setter& setter, float min, float max):
-            AttributeCellWidgetTypedBase(name, description, getter, setter, min, max)
+    AttributeCellFloat(const QString& name, const QString& description, 
+        const Getter& getter, const Setter& setter, float min, float max, float step):
+            AttributeCellWidgetTypedBase(name, description, getter, setter, min, max, step)
     {}
 
     // AttributeCellWidgetBase methods
@@ -309,6 +280,7 @@ struct AttributeCellWidget<float, float, float>:
         QDoubleSpinBox* spinBox = new QDoubleSpinBox(parent);
         spinBox->setMinimum(std::get<0>(m_data));
         spinBox->setMaximum(std::get<1>(m_data));
+        spinBox->setSingleStep(std::get<2>(m_data));
         
         return spinBox;
     }
@@ -332,28 +304,20 @@ struct AttributeCellWidget<float, float, float>:
     }
 };
 
-/// Floating point attribute data type.
-using AttributeCellFloat = 
-    AttributeCellWidget<float, float, float>;
-Q_DECLARE_METATYPE(AttributeCellFloat);
-Q_DECLARE_METATYPE(AttributeCellFloat*);
-
 ////////////////////////////////////////////////////////////////////////////////
-/// Texture attribute functions.
-template<>
-struct AttributeCellWidget<GLuint, ImageLibrary*>: 
-    public AttributeCellWidgetTypedBase<GLuint, ImageLibrary*>
+/// Texture attribute cell type.
+struct AttributeCellTexture: public AttributeCellWidgetTypedBase<GLuint, ImageLibrary*>
 {
-    AttributeCellWidget():
+    AttributeCellTexture():
         AttributeCellWidgetTypedBase()
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description,
+    AttributeCellTexture(const QString& name, const QString& description,
          GLuint* attrib, ImageLibrary* imageLibrary):
             AttributeCellWidgetTypedBase(name, description, attrib, imageLibrary)
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description, 
+    AttributeCellTexture(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter, ImageLibrary* imageLibrary):
             AttributeCellWidgetTypedBase(name, description, getter, setter, imageLibrary)
     {}
@@ -435,28 +399,22 @@ struct AttributeCellWidget<GLuint, ImageLibrary*>:
     }
 };
 
-/// Texture attribute data type.
-using AttributeCellTexture = 
-    AttributeCellWidget<GLuint, ImageLibrary*>;
-Q_DECLARE_METATYPE(AttributeCellTexture*);
-Q_DECLARE_METATYPE(AttributeCellTexture);
-
 ////////////////////////////////////////////////////////////////////////////////
-/// String attribute functions.
-template<>
-struct AttributeCellWidget<std::string>: 
-    public AttributeCellWidgetTypedBase<std::string>
+/// String attribute cell type.
+// TODO: this should use a QString, rather than an std::string (works like this
+// because the optical system name is embedded into the optical system itself)
+struct AttributeCellString: public AttributeCellWidgetTypedBase<std::string>
 {
-    AttributeCellWidget():
+    AttributeCellString():
         AttributeCellWidgetTypedBase()
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description, 
+    AttributeCellString(const QString& name, const QString& description, 
         std::string* attrib):
             AttributeCellWidgetTypedBase(name, description, attrib)
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description, 
+    AttributeCellString(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter):
             AttributeCellWidgetTypedBase(name, description, getter, setter)
     {}
@@ -509,28 +467,20 @@ struct AttributeCellWidget<std::string>:
     }
 };
 
-/// String attribute data type.
-using AttributeCellString = 
-    AttributeCellWidget<std::string>;
-Q_DECLARE_METATYPE(AttributeCellString);
-Q_DECLARE_METATYPE(AttributeCellString*);
-
 ////////////////////////////////////////////////////////////////////////////////
-/// String attribute functions.
-template<>
-struct AttributeCellWidget<QColor>: 
-    public AttributeCellWidgetTypedBase<QColor>
+/// Color attribute cell type.
+struct AttributeCellColor: public AttributeCellWidgetTypedBase<QColor>
 {
-    AttributeCellWidget():
+    AttributeCellColor():
         AttributeCellWidgetTypedBase()
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description,
+    AttributeCellColor(const QString& name, const QString& description,
          QColor* attrib):
             AttributeCellWidgetTypedBase(name, description, attrib)
     {}
 
-    AttributeCellWidget(const QString& name, const QString& description, 
+    AttributeCellColor(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter):
             AttributeCellWidgetTypedBase(name, description, getter, setter)
     {}
@@ -610,8 +560,173 @@ struct AttributeCellWidget<QColor>:
     }
 };
 
-/// Color attribute data type.
-using AttributeCellColor = 
-    AttributeCellWidget<QColor>;
-Q_DECLARE_METATYPE(AttributeCellColor);
-Q_DECLARE_METATYPE(AttributeCellColor*);
+////////////////////////////////////////////////////////////////////////////////
+/// Vector attribute functions.
+template<int NumComponents> struct AttributeCellVectorTypes {};
+template<> struct AttributeCellVectorTypes<2> { using type = glm::vec2; };
+template<> struct AttributeCellVectorTypes<3> { using type = glm::vec3; };
+template<> struct AttributeCellVectorTypes<4> { using type = glm::vec4; };
+
+template<int NumComponents>
+struct AttributeCellVector: public AttributeCellWidgetTypedBase<
+    typename AttributeCellVectorTypes<NumComponents>::type, 
+    typename AttributeCellVectorTypes<NumComponents>::type,
+    typename AttributeCellVectorTypes<NumComponents>::type,
+    typename AttributeCellVectorTypes<NumComponents>::type>
+{
+    // The actual vector type
+    using VectorType = typename AttributeCellVectorTypes<NumComponents>::type;
+
+    // Names of the labels
+    static QStringList labelNames()
+    {
+        static QStringList s_labelNames = 
+        {
+            "X", "Y", "Z", "W"
+        };
+        return s_labelNames;
+    }
+
+    // Converts a vector to a string.
+    static QString vecToString(VectorType vector)
+    {
+        QStringList values;
+        for (int i = 0; i < NumComponents; ++i)
+        {
+            values.append(QString::number(vector[i]));
+        }
+
+        // Return the result
+        return QString("(%1)").arg(values.join(", "));
+    }
+
+    /// Converts a string to a vector.
+    static VectorType stringToVec(const QString& string)
+    {
+        // Split the string into parts
+        auto parts = string.split(", ", QString::SkipEmptyParts);
+        if (parts.size() != NumComponents)
+        {
+            return VectorType(0.0f);
+        }
+
+        VectorType result;
+
+        for (int i = 0; i < NumComponents; ++i)
+        {
+            qDebug() << i << parts[i];
+        }
+
+        return result;
+    }
+
+    AttributeCellVector():
+        AttributeCellWidgetTypedBase()
+    {}
+
+    AttributeCellVector(const QString& name, const QString& description,
+         VectorType* attrib, VectorType min, VectorType max, VectorType step):
+            AttributeCellWidgetTypedBase(name, description, attrib, min, max, step)
+    {}
+
+    AttributeCellVector(const QString& name, const QString& description, 
+        const Getter& getter, const Setter& setter, 
+        VectorType min, VectorType max, VectorType step):
+            AttributeCellWidgetTypedBase(name, description, getter, setter, min, max, step)
+    {}
+
+    // AttributeCellWidgetBase methods
+    void refreshName(QAbstractItemModel* model, const QModelIndex& index) override
+    {
+        model->setData(index, m_name, Qt::DisplayRole);
+    }
+
+    void refreshView(QAbstractItemModel* model, const QModelIndex& index) override
+    {
+        model->setData(index, QVariant::fromValue(vecToString(m_getter())), Qt::EditRole);
+    }
+
+    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) override
+    {
+        m_setter(stringToVec(qvariant_cast<QString>(model->data(index, Qt::EditRole))));
+    }
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, 
+        const QModelIndex& index) override
+    {
+    }
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
+        const QModelIndex& index) override
+    {
+        // Min and max values
+        VectorType min = std::get<0>(m_data);
+        VectorType max = std::get<1>(m_data);
+        VectorType step = std::get<2>(m_data);
+
+        // Create an empty root widget
+        QWidget* widget = new QWidget(parent);
+
+        // Create the horizontal layout
+        QHBoxLayout* layout = new QHBoxLayout();
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+        
+        // Create the spinboxes
+        for (int i = 0; i < NumComponents; ++i)
+        {
+            // Create a text widget that holds the name of the component.
+            QLabel* label = new QLabel(widget);
+            label->setText(labelNames()[i]);
+            label->setFixedWidth(14);
+            label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Ignored);
+            label->setAlignment(Qt::AlignHCenter);
+
+            // Create the spinbox button
+            QDoubleSpinBox* spinBox = new QDoubleSpinBox(parent);
+            spinBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Ignored);
+            spinBox->setMinimum(min[i]);
+            spinBox->setMaximum(max[i]);
+            spinBox->setSingleStep(step[i]);
+
+            // Put them into the layout
+            layout->addWidget(label);
+            layout->addWidget(spinBox);
+        }
+
+        // Add the layout to the widget
+        widget->setLayout(layout);
+
+        return widget;
+    }
+
+    void setEditorData(QWidget* editor, const QModelIndex& index) override
+    {
+        VectorType value = m_getter();
+
+        for (int i = 0; i < NumComponents; ++i)
+        {
+            QDoubleSpinBox* spinBox = (QDoubleSpinBox*) (editor->layout()->itemAt(i * 2 + 1)->widget());
+            spinBox->setValue(value[i]);
+        }
+    }
+
+    void setModelData(QWidget* editor, QAbstractItemModel* model,
+        const QModelIndex& index) override
+    {
+        VectorType value;
+
+        for (int i = 0; i < NumComponents; ++i)
+        {
+            QDoubleSpinBox* spinBox = (QDoubleSpinBox*) (editor->layout()->itemAt(i * 2 + 1)->widget());
+            value[i] = spinBox->value();
+        }
+        m_setter(value);
+        model->setData(index, vecToString(value), Qt::EditRole);
+    }
+};
+
+/// Vector attribute data types.
+using AttributeCellVec2 = AttributeCellVector<2>;
+using AttributeCellVec3 = AttributeCellVector<3>;
+using AttributeCellVec4 = AttributeCellVector<4>;
