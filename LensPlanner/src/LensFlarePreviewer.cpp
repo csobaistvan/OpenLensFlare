@@ -11,8 +11,6 @@ static QOpenGLFunctions_3_3_Core* getGLFunctions()
 ////////////////////////////////////////////////////////////////////////////////
 LensFlarePreviewer::LensFlarePreviewer(OLEF::OpticalSystem* system, QWidget* parent):
     QOpenGLWidget(parent),
-    m_lightPolar{ glm::radians(90.0f), glm::radians(90.0f) },
-    m_prevMouse{ -1, -1 },
     m_opticalSystem(system),
     m_ghosts(system),
     m_starburstAlgorithm(nullptr),
@@ -35,10 +33,6 @@ LensFlarePreviewer::LensFlarePreviewer(OLEF::OpticalSystem* system, QWidget* par
 
     // Set a minimum size.
     setMinimumSize(QSize(400, 400));
-    
-    // Enable mouse interaction
-    setMouseTracking(true);
-    setFocusPolicy(Qt::ClickFocus);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -67,6 +61,17 @@ LensFlarePreviewer::~LensFlarePreviewer()
 
     // Release the context
     doneCurrent();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void LensFlarePreviewer::generateStarburst(int textureSize, float minWl, float maxWl, float wlStep)
+{
+    // Make sure it is not called before the objects are initialized
+    if (m_starburstAlgorithm == nullptr)
+        return;
+
+    // Generate the texture
+    m_starburstAlgorithm->generateTexture(textureSize, textureSize, minWl, maxWl, wlStep);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -169,50 +174,6 @@ void LensFlarePreviewer::releaseTexture(GLuint texture)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void LensFlarePreviewer::mousePressEvent(QMouseEvent* event)
-{
-    m_prevMouse[0] = event->x();
-    m_prevMouse[1] = event->y();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void LensFlarePreviewer::mouseMoveEvent(QMouseEvent* event)
-{
-    // Check if left button is pressed
-    if ((event->buttons() & Qt::LeftButton) != 0)
-    {
-        // Compute delta values
-        int dx = event->x() - m_prevMouse[0];
-        int dy = event->y() - m_prevMouse[1];
-        m_prevMouse[0] = event->x();
-        m_prevMouse[1] = event->y();
-
-        // Don't do anything on the first use
-        if (m_prevMouse[0] == -1)
-            return;
-
-        // Update the angles
-        m_lightPolar[0] -= dx * glm::radians(0.5f);
-        m_lightPolar[1] += dy * glm::radians(0.5f);
-
-        // Update the light angle
-        /*
-        m_lightSource.setIncidenceDirection(glm::vec3(
-            glm::cos(m_lightPolar[0]) * glm::sin(m_lightPolar[1]), 
-            glm::cos(m_lightPolar[1]),
-            glm::sin(m_lightPolar[0]) * glm::sin(m_lightPolar[1])));
-        */
-
-        // Update the view
-        update();
-    }
-}
-    
-////////////////////////////////////////////////////////////////////////////////
-void LensFlarePreviewer::wheelEvent(QWheelEvent* event)
-{}
-
-////////////////////////////////////////////////////////////////////////////////
 void LensFlarePreviewer::initializeGL()
 {
     // Init glew for OpenLensFlare to work.
@@ -224,18 +185,11 @@ void LensFlarePreviewer::initializeGL()
 
     // Create the starburst renderer.
     OLEF::DiffractionStarburstAlgorithm* diffStarburst = 
-        new OLEF::DiffractionStarburstAlgorithm(m_opticalSystem, 0.15f, 
-            40.0f);
+        new OLEF::DiffractionStarburstAlgorithm(m_opticalSystem);
 
     /// Create the ray trace ghost algorithm
     OLEF::RayTraceGhostAlgorithm* rayTraceGhost = 
         new OLEF::RayTraceGhostAlgorithm(m_opticalSystem, m_ghosts);
-
-    // Initialize the light source.
-    //m_lightSource.setScreenPosition(glm::vec2(0.0f));
-    //m_lightSource.setIncidenceDirection(glm::vec3(0.0f, 0.0f, 1.0f));
-    //m_lightSource.setDiffuseColor(glm::vec3(1.0f));
-    //m_lightSource.setDiffuseIntensity(1.0f);
     
     // Store the created objects.
     m_starburstAlgorithm = diffStarburst;
@@ -261,6 +215,27 @@ void LensFlarePreviewer::paintGL()
     f->glClear(GL_COLOR_BUFFER_BIT);
 
     // Render the starburst
-    //m_starburstAlgorithm->renderStarburst(m_lightSource);
-    //m_ghostAlgorithm->renderAllGhosts(m_lightSource);
+    for (auto lightSource: m_lightSources)
+    {
+        // Construct the corresponding light source object
+        OLEF::LightSource lightSourceObject;
+
+        lightSourceObject.setScreenPosition(lightSource.m_position);
+        lightSourceObject.setIncidenceDirection(lightSource.m_direction);
+        lightSourceObject.setDiffuseColor(glm::vec3(
+            lightSource.m_color.redF(), 
+            lightSource.m_color.greenF(), 
+            lightSource.m_color.blueF()
+        ));
+        lightSourceObject.setDiffuseIntensity(lightSource.m_intensity);
+
+        // Set the per-starburst parameters and render it
+        m_starburstAlgorithm->setSize(lightSource.m_starburstSize);
+        m_starburstAlgorithm->setIntensity(lightSource.m_starburstIntensity);
+        
+        m_starburstAlgorithm->renderStarburst(lightSourceObject);
+
+        // Render the ghosts
+        m_ghostAlgorithm->renderAllGhosts(lightSourceObject);
+    }
 }

@@ -14,6 +14,13 @@ public:
         m_length(0)
     {}
 
+    /// Constructs a ghost with the parameter vector.
+    Ghost(const std::vector<int>& interfaces):
+        m_length(interfaces.size())
+    {
+        std::copy(interfaces.begin(), interfaces.end(), m_interfaces.begin());
+    }
+
     /// Constructs a ghost with the parameter initializer list.
     Ghost(const std::initializer_list<int>& interfaces):
         m_length(interfaces.size())

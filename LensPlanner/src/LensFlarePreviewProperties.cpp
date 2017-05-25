@@ -7,6 +7,44 @@ QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getGlobalAttribute
 {
     return
     {
+        new AttributeCellInt
+        {
+            "Starburst Texture Size",
+            "",
+            &m_starburstTextureSize,
+            128,
+            4096,
+            1,
+        },
+        new AttributeCellFloat
+        {
+            "Starburst Start Lambda",
+            "",
+            &m_starburstMinWl,
+            380.0f,
+            780.0f,
+            1.0f,
+        },
+        new AttributeCellFloat
+        {
+            "Starburst End Lambda",
+            "",
+            &m_starburstMaxWl,
+            380.0f,
+            780.0f,
+            1.0f,
+        },
+        new AttributeCellFloat
+        {
+            "Starburst Lambda Step",
+            "",
+            &m_starburstWlStep,
+            1.0f,
+            50.0f,
+            1.0f,
+        },
+        // * lens flare algorithm
+        // * lens flare visualization modes (UV, relative radius, bounds, etc.)
     };
 }
 
@@ -50,13 +88,35 @@ QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getLightSourceAttr
             1000.0f,
             0.01f,
         },
+        new AttributeCellFloat
+        {
+            "Starburst Scale",
+            "",
+            &m_lightSources[lightSourceId].m_starburstSize,
+            0.0f,
+            1.0f,
+            0.01f,
+        },
+        new AttributeCellFloat
+        {
+            "Starburst Intensity",
+            "",
+            &m_lightSources[lightSourceId].m_starburstIntensity,
+            0.0f,
+            100000.0f,
+            0.1f,
+        },
     };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 LensFlarePreviewProperties::LensFlarePreviewProperties(LensFlarePreviewer* previewer, QWidget* parent):
     QWidget(parent),
-    m_previewer(previewer)
+    m_previewer(previewer),
+    m_starburstTextureSize(512),
+    m_starburstMinWl(390.0f),
+    m_starburstMaxWl(780.0f),
+    m_starburstWlStep(5.0f)
 {
     // Create the tree and the layout
     createToolBar();
@@ -73,34 +133,6 @@ LensFlarePreviewProperties::LensFlarePreviewProperties(LensFlarePreviewer* previ
 ////////////////////////////////////////////////////////////////////////////////
 LensFlarePreviewProperties::~LensFlarePreviewProperties()
 {}
-
-////////////////////////////////////////////////////////////////////////////////
-void LensFlarePreviewProperties::generateLightSources()
-{
-    // Extract the optical system pointer
-    QVector<OLEF::LightSource> lightSources;
-    lightSources.reserve(m_lightSources.size());
-
-    // Generate the actual definitions
-    for (auto& lightSource: m_lightSources)
-    {
-        OLEF::LightSource outLightSource;
-
-        outLightSource.setScreenPosition(lightSource.m_position);
-        outLightSource.setIncidenceDirection(lightSource.m_direction);
-        outLightSource.setDiffuseColor(glm::vec3(
-            lightSource.m_color.redF(), 
-            lightSource.m_color.greenF(), 
-            lightSource.m_color.blueF()
-        ));
-        outLightSource.setDiffuseIntensity(lightSource.m_intensity);
-
-        lightSources.push_back(outLightSource);
-    }
-
-    // Store the batch parameters
-    m_previewer->setLightSources(lightSources);
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 void LensFlarePreviewProperties::updateTreeAttribute(AttributeCellWidgetBase* attrib,
@@ -157,7 +189,9 @@ void LensFlarePreviewProperties::update()
 ////////////////////////////////////////////////////////////////////////////////
 void LensFlarePreviewProperties::itemChanged(QStandardItem* item)
 {
-    generateLightSources();
+    m_previewer->setLightSources(m_lightSources);
+    m_previewer->generateStarburst(m_starburstTextureSize, 
+        m_starburstMinWl, m_starburstMaxWl, m_starburstWlStep);
     m_previewer->update();
 }
 
@@ -178,7 +212,7 @@ void LensFlarePreviewProperties::addItem()
     auto dstId = (selected.isValid()) ? selected.row() : m_lightSources.size();
     
     // Append to the list
-    m_lightSources.insert(m_lightSources.begin() + dstId, LightSource());
+    m_lightSources.insert(m_lightSources.begin() + dstId, {});
 
     // Create its item.
     createTreeItem(dstId);

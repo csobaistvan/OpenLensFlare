@@ -6,7 +6,7 @@ namespace OLEF
 {
 namespace GLHelpers
 {
-    /// Uploads a uniform
+    /// Helper functions to overload a named uniform.
     inline void uploadUniform(GLuint program, const char* name, GLfloat val)
     {
         GLuint loc = glGetUniformLocation(program, name);
@@ -114,7 +114,8 @@ namespace GLHelpers
         {
             // Create the shader, set the source, compile
 	        GLuint shader = glCreateShader(shaderSource.first);
-            glShaderSource(shader, (GLsizei) shaderSource.second.size(), shaderSource.second.data(), NULL);
+            glShaderSource(shader, (GLsizei) shaderSource.second.size(), 
+                shaderSource.second.data(), NULL);
             glCompileShader(shader);
             
             // Make sure it compiled successfully
@@ -123,7 +124,8 @@ namespace GLHelpers
 
             if (status == GL_FALSE)
             {
-                glGetShaderInfoLog(shader, sizeof(s_errorBuffer) / sizeof(GLchar), NULL, s_errorBuffer);
+                glGetShaderInfoLog(shader, sizeof(s_errorBuffer) / sizeof(GLchar), 
+                    NULL, s_errorBuffer);
                 
                 //TODO: handle the error
                 std::cout << s_errorBuffer << std::endl;
@@ -158,7 +160,9 @@ namespace GLHelpers
 
         if (status == GL_FALSE)
         {
-            glGetProgramInfoLog(program, sizeof(s_errorBuffer) / sizeof(GLchar), NULL, s_errorBuffer);
+            glGetProgramInfoLog(program, sizeof(s_errorBuffer) / sizeof(GLchar), 
+                NULL, s_errorBuffer);
+            
             //TODO: handle the error
             std::cout << s_errorBuffer << std::endl;
         }

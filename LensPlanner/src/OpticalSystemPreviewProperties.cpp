@@ -21,7 +21,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getGlobalAttri
             std::bind(&OpticalSystemPreviewer::getIrisColor, std::ref(*m_previewer)), 
             std::bind(&OpticalSystemPreviewer::setIrisColor, std::ref(*m_previewer), std::placeholders::_1),
         },
-        new AttributeCellFloat
+        /*new AttributeCellFloat
         {
             "Iris Line Width",
             "",
@@ -31,6 +31,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getGlobalAttri
             32.0f,
             1.0f,
         },
+        */
         new AttributeCellColor
         {
             "Lens Color", 
@@ -38,7 +39,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getGlobalAttri
             std::bind(&OpticalSystemPreviewer::getLensColor, std::ref(*m_previewer)), 
             std::bind(&OpticalSystemPreviewer::setLensColor, std::ref(*m_previewer), std::placeholders::_1),
         },
-        new AttributeCellFloat
+        /*new AttributeCellFloat
         {
             "Lens Width",
             "",
@@ -48,6 +49,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getGlobalAttri
             32.0f,
             1.0f,
         },
+        */
         new AttributeCellColor
         {
             "Axis Color",
@@ -55,7 +57,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getGlobalAttri
             std::bind(&OpticalSystemPreviewer::getAxisColor, std::ref(*m_previewer)), 
             std::bind(&OpticalSystemPreviewer::setAxisColor, std::ref(*m_previewer), std::placeholders::_1),
         },
-        new AttributeCellFloat
+        /*new AttributeCellFloat
         {
             "Axis Width",
             "",
@@ -65,6 +67,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getGlobalAttri
             32.0f,
             1.0f,
         },
+        */
         new AttributeCellInt
         {
             "Lens Resolution",
@@ -84,7 +87,13 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getGlobalAttri
 QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttributes(int batchId)
 {
     return
-    {        
+    {
+        new AttributeCellBool
+        {
+            "Visualize Batch",
+            "",
+            &m_batches[batchId].m_enabled,
+        },
         new AttributeCellInt
         {
             "First Ghost",
@@ -105,12 +114,18 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
         },
         new AttributeCellInt
         {
-            "Number of reflections",
+            "Number of Reflections",
             "",
             &m_batches[batchId].m_numReflections,
             0,
             10,
-            1,
+            2,
+        },
+        new AttributeCellBool
+        {
+            "Aperture Cross",
+            "",
+            &m_batches[batchId].m_apertureCross,
         },
         new AttributeCellColor
         {
@@ -118,7 +133,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
             "",
             &m_batches[batchId].m_color,
         },
-        new AttributeCellFloat
+        /*new AttributeCellFloat
         {
             "Line Width",
             "",
@@ -127,6 +142,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemPreviewProperties::getBatchAttrib
             32.0f,
             1.0f,
         },
+        */
         new AttributeCellInt
         {
             "Number of Rays",
@@ -203,7 +219,7 @@ void OpticalSystemPreviewProperties::generateRayBatches()
     OLEF::OpticalSystem* opticalSystem = m_previewer->getOpticalSystem();
 
     QVector<OpticalSystemPreviewer::RayBatch> batches;
-    OLEF::GhostList ghosts[16];
+    OLEF::GhostList ghosts[16][2];
 
     // Reserve space
     int numBatches = 0;
@@ -218,10 +234,12 @@ void OpticalSystemPreviewProperties::generateRayBatches()
     for (auto& batch: m_batches)
     {
         // Generate ghosts on first reference
-        if (ghosts[batch.m_numReflections].getOpticalSystem() == nullptr)
+        if (ghosts[batch.m_numReflections][batch.m_apertureCross].
+            getOpticalSystem() == nullptr)
         {
-            ghosts[batch.m_numReflections] = OLEF::GhostList(
-                opticalSystem, batch.m_numReflections);
+            ghosts[batch.m_numReflections][batch.m_apertureCross] = 
+                OLEF::GhostList(opticalSystem, batch.m_numReflections, 
+                    batch.m_apertureCross);
         }
 
         // Append a batch for each ghost
@@ -229,12 +247,17 @@ void OpticalSystemPreviewProperties::generateRayBatches()
         {
             int ghostId = batch.m_firstGhost + i - 1;
             
-            if (ghostId >= ghosts[batch.m_numReflections].getGhostCount())
+            // Make sure the ghost ID is valid
+            if (ghostId >= ghosts[batch.m_numReflections][batch.m_apertureCross].getGhostCount())
                 break;
             
+            // Make sure the batch is enabled
+            if (batch.m_enabled == false)
+                continue;
+
             OpticalSystemPreviewer::RayBatch rayBatch;
 
-            rayBatch.m_ghost = ghosts[batch.m_numReflections][ghostId];
+            rayBatch.m_ghost = ghosts[batch.m_numReflections][batch.m_apertureCross][ghostId];
             rayBatch.m_color = batch.m_color;
             rayBatch.m_width = batch.m_lineWidth;
             rayBatch.m_rayCount = batch.m_rayCount;

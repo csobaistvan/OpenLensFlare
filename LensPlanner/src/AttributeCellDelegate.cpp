@@ -6,24 +6,10 @@ AttributeCellDelegate::AttributeCellDelegate(QWidget* parent):
 {}
 
 ////////////////////////////////////////////////////////////////////////////////
-void AttributeCellDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, 
-    const QModelIndex& index) const
+bool AttributeCellDelegate::editorEvent(QEvent* event, QAbstractItemModel* model, 
+    const QStyleOptionViewItem& option, const QModelIndex& index)
 {
-    /*
-    const auto& data = index.data(Qt::UserRole + 1);
-    if (data.canConvert<AttributeCellWidgetBase*>())
-    {
-        AttributeCellWidgetBase* cellData = 
-            qvariant_cast<AttributeCellWidgetBase*>(data);
-
-        cellData->paint(painter, option, index);
-    }
-    else
-    {
-        QStyledItemDelegate::paint(painter, option, index);
-    }
-    */
-    QStyledItemDelegate::paint(painter, option, index);
+    return QStyledItemDelegate::editorEvent(event, model, option, index);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -78,4 +64,11 @@ void AttributeCellDelegate::setModelData(QWidget* editor,
     {
         QStyledItemDelegate::setModelData(editor, model, index);
     }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AttributeCellDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, 
+    const QModelIndex& index) const
+{
+    QStyledItemDelegate::paint(painter, option, index);
 }

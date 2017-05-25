@@ -29,6 +29,9 @@ private:
     /// Parameters for a ray to visualize.
     struct RayBatch
     {
+        /// Whether the ray should be shown or not.
+        bool m_enabled = true;
+
         /// Index of the first ghost to render.
         int m_firstGhost = 1;
 
@@ -37,6 +40,9 @@ private:
 
         /// The number of reflections.
         int m_numReflections = 0;
+
+        /// Whether aperture crossing is allowed or not.
+        bool m_apertureCross;
 
         /// Color of the corresponding lines.
         QColor m_color = QColor(Qt::white);

@@ -6,17 +6,18 @@
 
 /// Data related to an editor cell.
 template<typename AttribType, typename... DataTypes>
-struct AttributeCellWidgetTypedBase: public AttributeCellWidgetBase
+class AttributeCellWidgetTypedBase: public AttributeCellWidgetBase
 {
+public:
     /// Getter and setter function types.
     using Getter = std::function<AttribType()>;
     using Setter = std::function<void (AttribType)>;
 
-    /// Empty default constructor.
+    /// Empty default conclassor.
     AttributeCellWidgetTypedBase()
     {}
 
-    /// Constructs a cell data object with the specified name, a pointer to the
+    /// Conclasss a cell data object with the specified name, a pointer to the
     /// attribute and the specified data.
     AttributeCellWidgetTypedBase(const QString& name, const QString& description,
         AttribType* attrib, DataTypes... data):
@@ -26,7 +27,7 @@ struct AttributeCellWidgetTypedBase: public AttributeCellWidgetBase
             m_data(std::forward<DataTypes>(data)...)
     {}
 
-    /// Constructs a cell data object with the specified name, a getter/setter
+    /// Conclasss a cell data object with the specified name, a getter/setter
     /// pair and the specified data.
     AttributeCellWidgetTypedBase(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter, DataTypes... data):
@@ -34,39 +35,6 @@ struct AttributeCellWidgetTypedBase: public AttributeCellWidgetBase
             m_getter(getter),
             m_setter(setter),
             m_data(std::forward<DataTypes>(data)...)
-    {}
-
-    // AttributeCellWidgetBase methods
-    virtual void refreshName(QAbstractItemModel* model, const QModelIndex& index) override
-    {
-        //item->setData(m_name, Qt::DisplayRole);
-    }
-
-    virtual void refreshView(QAbstractItemModel* model, const QModelIndex& index) override
-    {
-        //item->setData(QVariant::fromValue(m_getter()), Qt::EditRole);
-    }
-
-    virtual void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) override
-    {
-        //m_setter(qvariant_cast<AttribType>(item->data(Qt::EditRole)));
-    }
-
-    virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, 
-        const QModelIndex& index) override
-    {}
-
-    virtual QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
-        const QModelIndex& index) override
-    {
-        return nullptr;
-    }
-
-    virtual void setEditorData(QWidget* editor, const QModelIndex& index) override
-    {}
-
-    virtual void setModelData(QWidget* editor, QAbstractItemModel* model,
-        const QModelIndex& index) override
     {}
 
     /// Name of the attribute held in the cell.
@@ -88,8 +56,9 @@ struct AttributeCellWidgetTypedBase: public AttributeCellWidgetBase
 ////////////////////////////////////////////////////////////////////////////////
 /// Enumeration attribute cell type.
 template<typename T>
-struct AttributeCellEnum: public AttributeCellWidgetTypedBase<T, QStringList>
+class AttributeCellEnum: public AttributeCellWidgetTypedBase<T, QStringList>
 {
+public:
     AttributeCellEnum():
         AttributeCellWidgetTypedBase()
     {}
@@ -105,34 +74,29 @@ struct AttributeCellEnum: public AttributeCellWidgetTypedBase<T, QStringList>
     {}
 
     // AttributeCellWidgetBase methods
-    void refreshName(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshName(QAbstractItemModel* model, const QModelIndex& index) const override
     {
         model->setData(index, m_name, Qt::DisplayRole);
     }
 
-    void refreshView(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshView(QAbstractItemModel* model, const QModelIndex& index) const override
     {
         const QStringList& names = std::get<0>(m_data);
         QString text = names[(int) m_getter()];
-        model->setData(index, QVariant::fromValue(text), Qt::EditRole);
+        model->setData(index, QVariant::fromValue(text), Qt::DisplayRole);
     }
 
-    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) const override
     {
         const QStringList& names = std::get<0>(m_data);
-        QString text = qvariant_cast<QString>(model->data(index, Qt::EditRole));
+        QString text = qvariant_cast<QString>(model->data(index, Qt::DisplayRole));
         auto it = std::find(names.constBegin(), names.constEnd(), text);
         int id = (it == names.constEnd()) ? 0 : it - names.constBegin();
         m_setter((T) id);
     }
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, 
-        const QModelIndex& index) override
-    {
-    }
-
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         const QStringList& names = std::get<0>(m_data);
         QComboBox* comboBox = new QComboBox(parent);
@@ -141,7 +105,7 @@ struct AttributeCellEnum: public AttributeCellWidgetTypedBase<T, QStringList>
         return comboBox;
     }
 
-    void setEditorData(QWidget* editor, const QModelIndex& index) override
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override
     {
         auto elemType = m_getter();
 
@@ -150,7 +114,7 @@ struct AttributeCellEnum: public AttributeCellWidgetTypedBase<T, QStringList>
     }
 
     void setModelData(QWidget* editor, QAbstractItemModel* model,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         const QStringList& names = std::get<0>(m_data);
         QComboBox* comboBox = (QComboBox*) editor;
@@ -158,7 +122,7 @@ struct AttributeCellEnum: public AttributeCellWidgetTypedBase<T, QStringList>
         auto elemType = (T) current;
 
         m_setter(elemType);
-        model->setData(index, names[current], Qt::EditRole);
+        model->setData(index, names[current], Qt::DisplayRole);
     }
 };
 
@@ -167,9 +131,72 @@ using AttributeCellElementType =
     AttributeCellEnum<OLEF::OpticalSystemElement::ElementType>;
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Integer attribute cell type.
-struct AttributeCellInt: public AttributeCellWidgetTypedBase<int, int, int, int>
+/// Bool attribute cell type.
+class AttributeCellBool: public AttributeCellWidgetTypedBase<bool>
 {
+public:
+    AttributeCellBool():
+        AttributeCellWidgetTypedBase()
+    {}
+
+    AttributeCellBool(const QString& name, const QString& description,
+         bool* attrib):
+            AttributeCellWidgetTypedBase(name, description, attrib)
+    {}
+
+    AttributeCellBool(const QString& name, const QString& description, 
+        const Getter& getter, const Setter& setter):
+            AttributeCellWidgetTypedBase(name, description, getter, setter)
+    {}
+
+    // AttributeCellWidgetBase methods
+    void refreshName(QAbstractItemModel* model, const QModelIndex& index) const override
+    {
+        model->setData(index, m_name, Qt::DisplayRole);
+    }
+
+    void refreshView(QAbstractItemModel* model, const QModelIndex& index) const override
+    {
+        model->setData(index, QVariant::fromValue(m_getter()), Qt::DisplayRole);
+    }
+
+    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) const override
+    {
+        m_setter(qvariant_cast<int>(model->data(index, Qt::DisplayRole)));
+    }
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
+        const QModelIndex& index) const override
+    {
+        QCheckBox* checkBox = new QCheckBox(parent);
+        
+        return checkBox;
+    }
+
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override
+    {
+        bool value = m_getter();
+
+        QCheckBox* checkBox = (QCheckBox*) editor;
+        checkBox->setChecked(value);
+    }
+
+    void setModelData(QWidget* editor, QAbstractItemModel* model,
+        const QModelIndex& index) const override
+    {
+        QCheckBox* checkBox = (QCheckBox*) editor;
+        bool value = checkBox->isChecked();
+
+        m_setter(value);
+        model->setData(index, value, Qt::DisplayRole);
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+/// Integer attribute cell type.
+class AttributeCellInt: public AttributeCellWidgetTypedBase<int, int, int, int>
+{
+public:
     AttributeCellInt():
         AttributeCellWidgetTypedBase()
     {}
@@ -185,28 +212,23 @@ struct AttributeCellInt: public AttributeCellWidgetTypedBase<int, int, int, int>
     {}
 
     // AttributeCellWidgetBase methods
-    void refreshName(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshName(QAbstractItemModel* model, const QModelIndex& index) const override
     {
         model->setData(index, m_name, Qt::DisplayRole);
     }
 
-    void refreshView(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshView(QAbstractItemModel* model, const QModelIndex& index) const override
     {
-        model->setData(index, QVariant::fromValue(m_getter()), Qt::EditRole);
+        model->setData(index, QVariant::fromValue(m_getter()), Qt::DisplayRole);
     }
 
-    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) const override
     {
-        m_setter(qvariant_cast<int>(model->data(index, Qt::EditRole)));
-    }
-
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, 
-        const QModelIndex& index) override
-    {
+        m_setter(qvariant_cast<int>(model->data(index, Qt::DisplayRole)));
     }
 
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         QSpinBox* spinBox = new QSpinBox(parent);
         spinBox->setMinimum(std::get<0>(m_data));
@@ -216,7 +238,7 @@ struct AttributeCellInt: public AttributeCellWidgetTypedBase<int, int, int, int>
         return spinBox;
     }
 
-    void setEditorData(QWidget* editor, const QModelIndex& index) override
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override
     {
         int value = m_getter();
 
@@ -225,20 +247,21 @@ struct AttributeCellInt: public AttributeCellWidgetTypedBase<int, int, int, int>
     }
 
     void setModelData(QWidget* editor, QAbstractItemModel* model,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         QSpinBox* spinBox = (QSpinBox*) editor;
         int value = spinBox->value();
 
         m_setter(value);
-        model->setData(index, value, Qt::EditRole);
+        model->setData(index, value, Qt::DisplayRole);
     }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Floating point attribute cell type.
-struct AttributeCellFloat: public AttributeCellWidgetTypedBase<float, float, float, float>
+class AttributeCellFloat: public AttributeCellWidgetTypedBase<float, float, float, float>
 {
+public:
     AttributeCellFloat():
         AttributeCellWidgetTypedBase()
     {}
@@ -254,28 +277,23 @@ struct AttributeCellFloat: public AttributeCellWidgetTypedBase<float, float, flo
     {}
 
     // AttributeCellWidgetBase methods
-    void refreshName(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshName(QAbstractItemModel* model, const QModelIndex& index) const override
     {
         model->setData(index, m_name, Qt::DisplayRole);
     }
 
-    void refreshView(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshView(QAbstractItemModel* model, const QModelIndex& index) const override
     {
-        model->setData(index, QVariant::fromValue(m_getter()), Qt::EditRole);
+        model->setData(index, QVariant::fromValue(m_getter()), Qt::DisplayRole);
     }
 
-    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) const override
     {
-        m_setter(qvariant_cast<float>(model->data(index, Qt::EditRole)));
-    }
-
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, 
-        const QModelIndex& index) override
-    {
+        m_setter(qvariant_cast<float>(model->data(index, Qt::DisplayRole)));
     }
 
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         QDoubleSpinBox* spinBox = new QDoubleSpinBox(parent);
         spinBox->setMinimum(std::get<0>(m_data));
@@ -285,7 +303,7 @@ struct AttributeCellFloat: public AttributeCellWidgetTypedBase<float, float, flo
         return spinBox;
     }
 
-    void setEditorData(QWidget* editor, const QModelIndex& index) override
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override
     {
         float value = m_getter();
 
@@ -294,20 +312,21 @@ struct AttributeCellFloat: public AttributeCellWidgetTypedBase<float, float, flo
     }
 
     void setModelData(QWidget* editor, QAbstractItemModel* model,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         QDoubleSpinBox* spinBox = (QDoubleSpinBox*) editor;
         float value = spinBox->value();
 
         m_setter(value);
-        model->setData(index, value, Qt::EditRole);
+        model->setData(index, value, Qt::DisplayRole);
     }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Texture attribute cell type.
-struct AttributeCellTexture: public AttributeCellWidgetTypedBase<GLuint, ImageLibrary*>
+class AttributeCellTexture: public AttributeCellWidgetTypedBase<GLuint, ImageLibrary*>
 {
+public:
     AttributeCellTexture():
         AttributeCellWidgetTypedBase()
     {}
@@ -323,31 +342,26 @@ struct AttributeCellTexture: public AttributeCellWidgetTypedBase<GLuint, ImageLi
     {}
 
     // AttributeCellWidgetBase methods
-    void refreshName(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshName(QAbstractItemModel* model, const QModelIndex& index) const override
     {
         model->setData(index, m_name, Qt::DisplayRole);
     }
 
-    void refreshView(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshView(QAbstractItemModel* model, const QModelIndex& index) const override
     {
         GLuint value = m_getter();
         QFileInfo fileInfo(std::get<0>(m_data)->lookUpTextureName(value));
-        model->setData(index, fileInfo.fileName(), Qt::EditRole);
+        model->setData(index, fileInfo.fileName(), Qt::DisplayRole);
     }
 
-    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) const override
     {
-        QString filePath = qvariant_cast<QString>(model->data(index, Qt::EditRole));
+        QString filePath = qvariant_cast<QString>(model->data(index, Qt::DisplayRole));
         m_setter(std::get<0>(m_data)->uploadTexture(filePath));
     }
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, 
-        const QModelIndex& index) override
-    {
-    }
-
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         // Create an empty root widget
         QWidget* widget = new QWidget(parent);
@@ -379,7 +393,7 @@ struct AttributeCellTexture: public AttributeCellWidgetTypedBase<GLuint, ImageLi
         return widget;
     }
 
-    void setEditorData(QWidget* editor, const QModelIndex& index) override
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override
     {
         GLuint value = m_getter();
 
@@ -388,14 +402,14 @@ struct AttributeCellTexture: public AttributeCellWidgetTypedBase<GLuint, ImageLi
     }
 
     void setModelData(QWidget* editor, QAbstractItemModel* model,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         QLineEdit* lineEdit = (QLineEdit*) (editor->layout()->itemAt(0)->widget());
         QString value = lineEdit->text();
         QFileInfo fileInfo(value);
 
         m_setter(std::get<0>(m_data)->uploadTexture(value));
-        model->setData(index, fileInfo.fileName(), Qt::EditRole);
+        model->setData(index, fileInfo.fileName(), Qt::DisplayRole);
     }
 };
 
@@ -403,8 +417,9 @@ struct AttributeCellTexture: public AttributeCellWidgetTypedBase<GLuint, ImageLi
 /// String attribute cell type.
 // TODO: this should use a QString, rather than an std::string (works like this
 // because the optical system name is embedded into the optical system itself)
-struct AttributeCellString: public AttributeCellWidgetTypedBase<std::string>
+class AttributeCellString: public AttributeCellWidgetTypedBase<std::string>
 {
+public:
     AttributeCellString():
         AttributeCellWidgetTypedBase()
     {}
@@ -420,35 +435,30 @@ struct AttributeCellString: public AttributeCellWidgetTypedBase<std::string>
     {}
 
     // AttributeCellWidgetBase methods
-    void refreshName(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshName(QAbstractItemModel* model, const QModelIndex& index) const override
     {
         model->setData(index, m_name, Qt::DisplayRole);
     }
 
-    void refreshView(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshView(QAbstractItemModel* model, const QModelIndex& index) const override
     {
-        model->setData(index, QVariant::fromValue(QString::fromStdString(m_getter())), Qt::EditRole);
+        model->setData(index, QVariant::fromValue(QString::fromStdString(m_getter())), Qt::DisplayRole);
     }
 
-    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) const override
     {
-        m_setter(qvariant_cast<QString>(model->data(index, Qt::EditRole)).toStdString());
-    }
-
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, 
-        const QModelIndex& index) override
-    {
+        m_setter(qvariant_cast<QString>(model->data(index, Qt::DisplayRole)).toStdString());
     }
 
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         QLineEdit* lineEdit = new QLineEdit(parent);
         
         return lineEdit;
     }
 
-    void setEditorData(QWidget* editor, const QModelIndex& index) override
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override
     {
         const std::string& value = m_getter();
 
@@ -457,20 +467,21 @@ struct AttributeCellString: public AttributeCellWidgetTypedBase<std::string>
     }
 
     void setModelData(QWidget* editor, QAbstractItemModel* model,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         QLineEdit* lineEdit = (QLineEdit*) editor;
         QString value = lineEdit->text();
 
         m_setter(value.toStdString());
-        model->setData(index, value, Qt::EditRole);
+        model->setData(index, value, Qt::DisplayRole);
     }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Color attribute cell type.
-struct AttributeCellColor: public AttributeCellWidgetTypedBase<QColor>
+class AttributeCellColor: public AttributeCellWidgetTypedBase<QColor>
 {
+public:
     AttributeCellColor():
         AttributeCellWidgetTypedBase()
     {}
@@ -486,29 +497,24 @@ struct AttributeCellColor: public AttributeCellWidgetTypedBase<QColor>
     {}
 
     // AttributeCellWidgetBase methods
-    void refreshName(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshName(QAbstractItemModel* model, const QModelIndex& index) const override
     {
         model->setData(index, m_name, Qt::DisplayRole);
     }
 
-    void refreshView(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshView(QAbstractItemModel* model, const QModelIndex& index) const override
     {
-        model->setData(index, QVariant::fromValue(m_getter().name()), Qt::EditRole);
+        model->setData(index, QVariant::fromValue(m_getter().name()), Qt::DisplayRole);
         model->setData(index, m_getter(), Qt::DecorationRole);
     }
 
-    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) const override
     {
-        m_setter(QColor(qvariant_cast<QString>(model->data(index, Qt::EditRole))));
-    }
-
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, 
-        const QModelIndex& index) override
-    {
+        m_setter(QColor(qvariant_cast<QString>(model->data(index, Qt::DisplayRole))));
     }
 
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         // Create an empty root widget
         QWidget* widget = new QWidget(parent);
@@ -540,7 +546,7 @@ struct AttributeCellColor: public AttributeCellWidgetTypedBase<QColor>
         return widget;
     }
 
-    void setEditorData(QWidget* editor, const QModelIndex& index) override
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override
     {
         QColor value = m_getter();
 
@@ -549,13 +555,13 @@ struct AttributeCellColor: public AttributeCellWidgetTypedBase<QColor>
     }
 
     void setModelData(QWidget* editor, QAbstractItemModel* model,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         QLineEdit* lineEdit = (QLineEdit*) (editor->layout()->itemAt(0)->widget());
         QString value = lineEdit->text();
 
         m_setter(QColor(value));
-        model->setData(index, value, Qt::EditRole);
+        model->setData(index, value, Qt::DisplayRole);
         model->setData(index, QColor(value), Qt::DecorationRole);
     }
 };
@@ -568,12 +574,13 @@ template<> struct AttributeCellVectorTypes<3> { using type = glm::vec3; };
 template<> struct AttributeCellVectorTypes<4> { using type = glm::vec4; };
 
 template<int NumComponents>
-struct AttributeCellVector: public AttributeCellWidgetTypedBase<
+class AttributeCellVector: public AttributeCellWidgetTypedBase<
     typename AttributeCellVectorTypes<NumComponents>::type, 
     typename AttributeCellVectorTypes<NumComponents>::type,
     typename AttributeCellVectorTypes<NumComponents>::type,
     typename AttributeCellVectorTypes<NumComponents>::type>
 {
+public:
     // The actual vector type
     using VectorType = typename AttributeCellVectorTypes<NumComponents>::type;
 
@@ -636,28 +643,23 @@ struct AttributeCellVector: public AttributeCellWidgetTypedBase<
     {}
 
     // AttributeCellWidgetBase methods
-    void refreshName(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshName(QAbstractItemModel* model, const QModelIndex& index) const override
     {
         model->setData(index, m_name, Qt::DisplayRole);
     }
 
-    void refreshView(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshView(QAbstractItemModel* model, const QModelIndex& index) const override
     {
-        model->setData(index, QVariant::fromValue(vecToString(m_getter())), Qt::EditRole);
+        model->setData(index, QVariant::fromValue(vecToString(m_getter())), Qt::DisplayRole);
     }
 
-    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) override
+    void refreshAttribute(QAbstractItemModel* model, const QModelIndex& index) const override
     {
-        m_setter(stringToVec(qvariant_cast<QString>(model->data(index, Qt::EditRole))));
-    }
-
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, 
-        const QModelIndex& index) override
-    {
+        m_setter(stringToVec(qvariant_cast<QString>(model->data(index, Qt::DisplayRole))));
     }
 
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         // Min and max values
         VectorType min = std::get<0>(m_data);
@@ -700,7 +702,7 @@ struct AttributeCellVector: public AttributeCellWidgetTypedBase<
         return widget;
     }
 
-    void setEditorData(QWidget* editor, const QModelIndex& index) override
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override
     {
         VectorType value = m_getter();
 
@@ -712,7 +714,7 @@ struct AttributeCellVector: public AttributeCellWidgetTypedBase<
     }
 
     void setModelData(QWidget* editor, QAbstractItemModel* model,
-        const QModelIndex& index) override
+        const QModelIndex& index) const override
     {
         VectorType value;
 
@@ -722,7 +724,7 @@ struct AttributeCellVector: public AttributeCellWidgetTypedBase<
             value[i] = spinBox->value();
         }
         m_setter(value);
-        model->setData(index, vecToString(value), Qt::EditRole);
+        model->setData(index, vecToString(value), Qt::DisplayRole);
     }
 };
 

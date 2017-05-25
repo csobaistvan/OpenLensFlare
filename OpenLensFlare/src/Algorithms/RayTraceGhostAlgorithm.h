@@ -122,6 +122,8 @@ public:
     void setLambdas(const std::vector<float>& value) { m_lambdas = value; }
 
 private:
+    void renderGhost();
+
     /// The optical system that generates the ghosts.
     OpticalSystem* m_opticalSystem;
 

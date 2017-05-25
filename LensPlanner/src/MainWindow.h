@@ -18,12 +18,22 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
+protected:
+      void showEvent(QShowEvent *ev);
+      
 private:
+    void createMenu();
+    void createLensFlareObjects();
+    void setupLayout();
+    void setupTestScene();
+
+    void loadOpticalSystem(const QString& fileName);
+
     /// File menu callbacks
-    void loadOpticalSystem();
+    void loadSystem();
     void loadGhostBounds();
     void loadStarburst();
-    void saveOpticalSystem();
+    void saveSystem();
     void saveGhostBounds();
     void saveStarburst();
     void quit();
@@ -52,4 +62,7 @@ private:
 
     /// Editor object for the lens flare preview options.
     LensFlarePreviewProperties* m_lensFlarePreviewProperties;
+
+    /// The folder where the browse window should open.
+    QString m_browseFolder;
 };

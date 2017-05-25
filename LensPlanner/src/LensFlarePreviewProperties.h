@@ -22,30 +22,11 @@ signals:
     void lightSourceParametersChangedSignal();
 
 private:
-    /// Parameters for a light source to visualize.
-    struct LightSource
-    {
-        /// Screen position of the light source.
-        glm::vec2 m_position = glm::vec2(0.0f, 0.0f);
-
-        /// Light source incidence direction.
-        glm::vec3 m_direction = glm::vec3(0.0f, 0.0f, -1.0f);
-
-        /// Color of the light source.
-        QColor m_color = QColor(Qt::white);
-
-        /// Diffuse intensity of the light source.
-        float m_intensity = 1.0f;
-    };
-
     /// Constructs global attributes for the previewer.
     QVector<AttributeCellWidgetBase*> getGlobalAttributes();
 
     /// Constructs light source attributes for the previewer.
     QVector<AttributeCellWidgetBase*> getLightSourceAttributes(int lightSourceId);
-
-    /// Generates ray batches for the preview widget.
-    void generateLightSources();
 
     /// Creates the top toolbar
     void createToolBar();
@@ -102,6 +83,12 @@ private:
     /// The layout holding together the items.
     QLayout* m_layout;
 
+    /// Starburst texture parameters.
+    int m_starburstTextureSize;
+    float m_starburstMinWl;
+    float m_starburstMaxWl;
+    float m_starburstWlStep;
+
     /// The light sources to render.
-    QVector<LightSource> m_lightSources;
+    QVector<LensFlarePreviewer::LightSource> m_lightSources;
 };

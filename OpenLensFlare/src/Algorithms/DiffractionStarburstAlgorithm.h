@@ -12,9 +12,8 @@ namespace OLEF
 class DiffractionStarburstAlgorithm: public StarburstAlgorithm
 {
 public:
-    /// Constructs an algorithms by using the parameter texture as the sprite
-    /// Constructs a texture generator object with the provided parameters.
-    DiffractionStarburstAlgorithm(OpticalSystem* system, float size, float intensity);
+    /// Constructs an algorithms by using the parameter texture as the sprite.
+    DiffractionStarburstAlgorithm(OpticalSystem* system);
     
     /// These objects are not copyable.
     DiffractionStarburstAlgorithm(const DiffractionStarburstAlgorithm& other) = delete;

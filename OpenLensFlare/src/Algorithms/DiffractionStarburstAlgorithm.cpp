@@ -13,10 +13,10 @@ namespace OLEF
 {
 
 ////////////////////////////////////////////////////////////////////////////////
-DiffractionStarburstAlgorithm::DiffractionStarburstAlgorithm(OpticalSystem* opticalSystem, float size, float intensity):
+DiffractionStarburstAlgorithm::DiffractionStarburstAlgorithm(OpticalSystem* opticalSystem):
     m_opticalSystem(opticalSystem),
-    m_size(size),
-    m_intensity(intensity),
+    m_size(0.0f),
+    m_intensity(0.0f),
     m_texture(0),
     m_external(false),
     m_generateShader(0),
@@ -97,6 +97,7 @@ bool DiffractionStarburstAlgorithm::generateTexture(int width, int height,
 {
     // The aperture FT texture
     GLuint apertureFT = 0;
+    GLfloat apertureDist = 0.0f;
     for (const auto& lens: m_opticalSystem->getElements())
     {
         if (lens.getType() == OpticalSystemElement::ElementType::APERTURE_STOP)
@@ -104,6 +105,8 @@ bool DiffractionStarburstAlgorithm::generateTexture(int width, int height,
             apertureFT = lens.getTextureFT();
             break;
         }
+
+        apertureDist += lens.getThickness();
     }
 
     // Release any previously generated texture.
@@ -144,6 +147,7 @@ bool DiffractionStarburstAlgorithm::generateTexture(int width, int height,
     GLHelpers::uploadUniform(m_generateShader, "fMaxLambda", maxLambda);
     GLHelpers::uploadUniform(m_generateShader, "fLambdaStep", lambdaStep);
     GLHelpers::uploadUniform(m_generateShader, "fTextureLambda", 570.0f);
+    GLHelpers::uploadUniform(m_generateShader, "fApertureDistance", apertureDist);
 
 	// Bind the aperture FFT texture
 	glActiveTexture(GL_TEXTURE0);
@@ -173,7 +177,7 @@ bool DiffractionStarburstAlgorithm::generateTexture(int width, int height,
 
 	// Upload the new image data the image
 	glBindTexture(GL_TEXTURE_2D, m_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, 
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, 
         GL_FLOAT, floatPixels);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
