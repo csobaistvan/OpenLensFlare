@@ -234,12 +234,11 @@ void OpticalSystemPreviewProperties::generateRayBatches()
     for (auto& batch: m_batches)
     {
         // Generate ghosts on first reference
-        if (ghosts[batch.m_numReflections][batch.m_apertureCross].
-            getOpticalSystem() == nullptr)
+        if (ghosts[batch.m_numReflections][batch.m_apertureCross].empty())
         {
             ghosts[batch.m_numReflections][batch.m_apertureCross] = 
-                OLEF::GhostList(opticalSystem, batch.m_numReflections, 
-                    batch.m_apertureCross);
+                opticalSystem->generateGhosts(batch.m_numReflections, 
+                batch.m_apertureCross);
         }
 
         // Append a batch for each ghost
@@ -248,7 +247,7 @@ void OpticalSystemPreviewProperties::generateRayBatches()
             int ghostId = batch.m_firstGhost + i - 1;
             
             // Make sure the ghost ID is valid
-            if (ghostId >= ghosts[batch.m_numReflections][batch.m_apertureCross].getGhostCount())
+            if (ghostId >= ghosts[batch.m_numReflections][batch.m_apertureCross].size())
                 break;
             
             // Make sure the batch is enabled

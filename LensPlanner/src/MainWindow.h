@@ -7,6 +7,7 @@
 #include "OpticalSystemPreviewProperties.h"
 #include "LensFlarePreviewProperties.h"
 #include "OpticalSystemSerializer.h"
+#include "GhostSerializer.h"
 
 #include <QMainWindow>
 
@@ -37,10 +38,6 @@ private:
     void saveGhostBounds();
     void saveStarburst();
     void quit();
-
-    /// Generate menu callbacks
-    void generateGhostBounds();
-    void generateStarburst();
 
     /// Help menu callbacks
     void about();

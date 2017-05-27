@@ -24,6 +24,11 @@ public:
 /// Represents a library, which is responsible for mapping texture names to
 /// images. It also maps GLuint textures to texture names, allowing to access
 /// the OpenLensFlare images through their id's.
+///
+/// TODO: some of the function names are really cryptic (e.g. the various
+///       overloaded 'loadImage' functions), rename them to better names
+/// TODO: also, some of the function pairs do not seem to share the same attributes
+///       ()
 class ImageLibrary: public QObject
 {
     Q_OBJECT

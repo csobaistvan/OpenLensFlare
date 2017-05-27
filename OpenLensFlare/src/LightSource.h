@@ -16,11 +16,11 @@ public:
     {}
     
     /// Constructs a light source with the parameter values.
-    LightSource(glm::vec2 pos, glm::vec3 dir, glm::vec3 c, float i):
+    LightSource(glm::vec2 pos, glm::vec3 dir, glm::vec3 color, float intensity):
         m_screenPosition(pos),
         m_incidenceDirection(dir),
-        m_diffuseColor(c),
-        m_diffuseIntensity(i)
+        m_diffuseColor(color),
+        m_diffuseIntensity(intensity)
     {}
 
     /// Returns the position of the light source on the screen.
@@ -28,6 +28,9 @@ public:
 
     /// Returns a unit length vector describing the incidence direction.
     glm::vec3 getIncidenceDirection() const { return m_incidenceDirection; }
+    
+    /// Returns a unit length vector pointing toward the light source.
+    glm::vec3 getToLightDirection() const { return -m_incidenceDirection; }
 
     /// Returns the normalized color of the light source
     glm::vec3 getDiffuseColor() const { return m_diffuseColor; }

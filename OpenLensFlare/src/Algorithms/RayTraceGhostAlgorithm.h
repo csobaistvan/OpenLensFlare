@@ -1,8 +1,7 @@
 #pragma once
 
 #include "../OpticalSystem.h"
-#include "../GhostList.h"
-#include "../GhostAttributes.h"
+#include "../Ghost.h"
 #include "../LightSource.h"
 #include "../GhostAlgorithm.h"
 
@@ -13,18 +12,45 @@ namespace OLEF
 class RayTraceGhostAlgorithm: public GhostAlgorithm
 {
 public:
-    /// Construct an empty instance. Use deserialize() to populate to the object
-    /// with all the data needed to be functional.
-    RayTraceGhostAlgorithm();
+    /// Enumerates the various ways rays can be transformed during rendering to
+    /// get their final projected coordinates.
+    enum class RenderMode
+    {
+        /// Use the ray-traced, projected ghost coordinates (normal).
+        PROJECTED_GHOST,
 
-    /// Construct a ray traced flare rendering object that can render the
-    /// ghosts provided in the parameter object.
-    RayTraceGhostAlgorithm(OpticalSystem* system, const GhostList& ghosts);
+        /// Render with the originating ray pupil coordinates.
+        PUPIL_GRID,
+    };
 
-    /// Construct a ray traced flare rendering object that can render the
-    /// ghosts provided in the parameter object.
-    RayTraceGhostAlgorithm(OpticalSystem* system, const GhostList& ghosts,
-        const std::vector<float>& lambdas, float intensityScaling);
+    /// Enumerates the possible shading mode, which control how the projected
+    /// ray geometry is colored.
+    enum class ShadingMode
+    {
+        /// Fully shaded using the target color, intensity scaling and
+        /// transmitted energy factor.
+        SHADED,
+
+        /// Shaded using the intensity scaling and transmitted energy, but
+        /// ignoring the target color.
+        UNCOLORED,
+
+        /// Fully white.
+        UNSHADED,
+
+        /// Display the pupil coordinates of the correspondng ray.
+        RAY_COORDINATES,
+
+        /// Display the UV coordinates of the ray.
+        UV_COORDINATES,
+
+        /// Display the corresponding relative radius.
+        RELATIVE_RADIUS
+    };
+
+    /// Construct a ray traced flare rendering object that can render ghosts
+    /// for the parameter optical system.
+    RayTraceGhostAlgorithm(OpticalSystem* system);
     
     /// Releases all the allocated GL objects.
     ~RayTraceGhostAlgorithm();
@@ -37,59 +63,46 @@ public:
 
     /// Helper structure holding all the parameters needed for computing
     /// the rendering attributes of a ghost.
-    struct ComputeParams
+    ///
+    /// TODO: these should really use an array instead of vectors, to avoid
+    ///       dynamic memory allocations (even in such a relatively rarely used
+    ///       context).
+    struct GhostAttribComputeParams
     {
-        /// The first angle to compute data for. 
-        float m_firstAngle = 0.0f;
-
-        /// The angle difference between two consecutive computation. 
-        float m_angleStep = 0.5f;
-
-        /// The total number of angles.
-        int m_numAngles = 181;
+        /// The incoming angle to compute data for. 
+        float m_angle = 0.0f;
 
         /// The total number of bounding passes to take per ghost.
         int m_boundingPasses = 2;
 
         /// The number of rays to use in each bounding step. The last element
-        /// is used if the number of passes excreeds the vector size.
+        /// is used if the number of passes exceeds the vector size.
         std::vector<int> m_boundingRays = { 33, 33 };
 
         /// The list of ray grid sizes to choose from.
-        std::vector<int> m_rayPresets = { 5, 17, 33, 65, 127 };
+        std::vector<int> m_rayPresets = { 5, 16, 32, 64, 128 };
     };
 
     /// Computes the ghost rendering attributes corresponding to the provided
-    /// parameters, for all the ghosts that the object can render.
-    void computeGhostAttributes(const ComputeParams& params = {});
-
-    /// Serializes all the contained data (optical system, list of ghosts and 
-    /// their computed attributes) into the target stream. Note that the stream 
-    /// is expected to be binary.
-    bool serialize(const std::ostream& stream) const;
-
-    /// Deserializes all the contained data from the parameter stream, 
-    /// overwriting all the existing data currently in the object. Note that the
-    /// stream is expected to be binary.
-    bool deserialize(const std::istream& stream);
+    /// parameters, and returns a new ghost list with the ghosts containing
+    /// the computed attributes.
+    GhostList computeGhostAttributes(
+        const GhostList& ghosts, const GhostAttribComputeParams& params = {});
 
     /// Renders the ghosts corresponding to the parameter light source.
-    void renderGhosts(const LightSource& light, int first, int count);
+    void renderGhosts(const LightSource& light, const GhostList& ghosts);
 
     /// Returns the optical system that generates the ghosts.
     OpticalSystem* getOpticalSystem() const { return m_opticalSystem; }
-
-    /// Returns the list of ghosts this object can render.
-    const GhostList& getGhostList() const { return m_ghosts; }
 
     /// Returns the intensity scaling factor.
     float getIntensityScale() const { return m_intensityScale; }
 
     /// Returns the render mode.
-    int getRenderMode() const { return m_renderMode; }
+    RenderMode getRenderMode() const { return m_renderMode; }
 
     /// Returns the shading mode.
-    int getShadeMode() const { return m_shadeMode; }
+    ShadingMode getShadingMode() const { return m_shadingMode; }
 
     /// Returns the radius clipping value.
     float getRadiusClip() const { return m_radiusClip; }
@@ -97,20 +110,20 @@ public:
     /// Returns the distance clipping value.
     float getDistanceClip() const { return m_distanceClip; }
 
+    /// Returns the intensity clipping value.
+    float getIntensityClip() const { return m_intensityClip; }
+
     /// Returns the wavelengths at which to render the ghosts.
     const std::vector<float>& getLambdas() const { return m_lambdas; }
-
-    /// Refreshes the ghost list.
-    void setGhostList(const GhostList& value) { m_ghosts = value; }
 
     /// Sets the intensity scaling factor.
     void setIntensityScale(float value) { m_intensityScale = value; }
 
     /// Sets the render mode.
-    void setRenderMode(int value) { m_renderMode = value; }
+    void setRenderMode(RenderMode value) { m_renderMode = value; }
 
     /// Sets the shading mode.
-    void setShadeMode(int value) { m_shadeMode = value; }
+    void setShadingMode(ShadingMode value) { m_shadingMode = value; }
 
     /// Sets the radius clipping value.
     void setRadiusClip(float value) { m_radiusClip = value; }
@@ -118,32 +131,59 @@ public:
     /// Sets the distance clipping value.
     void setDistanceClip(float value) { m_distanceClip = value; }
 
+    /// Sets the intensity clipping value.
+    void setIntensityClip(float value) { m_intensityClip = value; }
+
     /// Sets the wavelengths at which to render the ghosts.
     void setLambdas(const std::vector<float>& value) { m_lambdas = value; }
 
 private:
-    void renderGhost();
+    /// Parameters used for rendering the ghost.
+    struct RenderParameters
+    {
+        /// The light source to render.
+        LightSource m_lightSource;
+
+        /// The ghost to render.
+        Ghost m_ghost;
+
+        /// Mask texture.
+        GLuint m_mask;
+
+        /// Wavelength to render at.
+        float m_lambda;
+
+        /// Intensity scaling.
+        float m_intensityScale;
+
+        /// Render mode.
+        RenderMode m_renderMode;
+
+        /// Shading mode.
+        ShadingMode m_shadingMode;
+
+        /// Radius clipping.
+        float m_radiusClip;
+
+        /// Distance clipping.
+        float m_distanceClip;
+    };
+
+    /// Renders a specific channel of a ghost. It uses a parameter structure
+    /// so that it can be reused for both rendering and parameter computation.
+    void renderGhostChannel(const RenderParameters& parameters);
 
     /// The optical system that generates the ghosts.
     OpticalSystem* m_opticalSystem;
-
-    // The full list of all the ghosts this object should render.
-    GhostList m_ghosts;
-
-    /// A list of ghost attributes, each corresponding to the same angle.
-    using GhostAttributesList = std::vector<GhostAttributes>;
-
-    /// List of pre-computed ghost attributes.
-    std::map<float, GhostAttributesList> m_attributes;
 
     /// Intensity scaling.
     float m_intensityScale;
 
     /// Render mode.
-    int m_renderMode;
+    RenderMode m_renderMode;
 
     /// Shading mode.
-    int m_shadeMode;
+    ShadingMode m_shadingMode;
 
     /// Radius clipping.
     float m_radiusClip;
@@ -151,11 +191,18 @@ private:
     /// Distance clipping.
     float m_distanceClip;
 
+    /// Intensity clip value, used to reject low intensity ghosts.
+    float m_intensityClip;
+
     /// Wavelengths at which to render the ghosts.
     std::vector<float> m_lambdas;
 
-    /// A dummy vao to use.
+    /// A dummy vertex array to use, since OpenGL requires a valid object to be
+    /// bound, even if we don't actually use any vertex buffers.
     GLuint m_vao;
+
+    /// Shader used for parameter computation.
+    GLuint m_precomputeShader;
     
     /// Shader used for rendering.
     GLuint m_renderShader;

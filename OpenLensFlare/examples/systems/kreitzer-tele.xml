@@ -14,8 +14,10 @@
             <radius>132.287994</radius>
             <refractiveIndex>1.518000</refractiveIndex>
             <abbeNumber>59.000000</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -24,8 +26,10 @@
             <radius>-213.548004</radius>
             <refractiveIndex>1.000000</refractiveIndex>
             <abbeNumber>89.300003</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -34,8 +38,10 @@
             <radius>111.300003</radius>
             <refractiveIndex>1.518000</refractiveIndex>
             <abbeNumber>59.000000</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -44,8 +50,10 @@
             <radius>-143.735992</radius>
             <refractiveIndex>1.749000</refractiveIndex>
             <abbeNumber>35.000000</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -54,8 +62,10 @@
             <radius>163.600006</radius>
             <refractiveIndex>1.000000</refractiveIndex>
             <abbeNumber>89.300003</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -64,8 +74,10 @@
             <radius>0.000000</radius>
             <refractiveIndex>1.785000</refractiveIndex>
             <abbeNumber>25.700001</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -74,8 +86,10 @@
             <radius>-67.099998</radius>
             <refractiveIndex>1.835000</refractiveIndex>
             <abbeNumber>43.000000</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -84,8 +98,10 @@
             <radius>108.612000</radius>
             <refractiveIndex>1.000000</refractiveIndex>
             <abbeNumber>89.300003</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>apertureStop</type>
@@ -94,10 +110,10 @@
             <radius>0.0</radius>
             <refractiveIndex>1.000000</refractiveIndex>
             <abbeNumber>89.300003</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
-			<mask>apertureDist.bmp</mask>
-			<maskFT>apertureFT.bmp</maskFT>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask>apertureDist.bmp</mask>
+            <maskFT>apertureFT.bmp</maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -106,8 +122,10 @@
             <radius>-483.000000</radius>
             <refractiveIndex>1.517000</refractiveIndex>
             <abbeNumber>52.200001</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -116,8 +134,10 @@
             <radius>-48.419998</radius>
             <refractiveIndex>1.000000</refractiveIndex>
             <abbeNumber>89.300003</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -126,8 +146,10 @@
             <radius>-37.543999</radius>
             <refractiveIndex>1.773000</refractiveIndex>
             <abbeNumber>49.599998</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -136,8 +158,10 @@
             <radius>-97.323997</radius>
             <refractiveIndex>1.000000</refractiveIndex>
             <abbeNumber>89.300003</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>sensor</type>
@@ -148,6 +172,8 @@
             <abbeNumber>89.300003</abbeNumber>
             <coatingLambda>0.000000</coatingLambda>
             <coatingIor>0.000000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
     </elements>
 </opticalSystem>

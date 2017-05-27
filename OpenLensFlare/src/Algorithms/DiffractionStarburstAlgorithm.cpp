@@ -24,12 +24,13 @@ DiffractionStarburstAlgorithm::DiffractionStarburstAlgorithm(OpticalSystem* opti
     m_vao(0)
 {
     // Create the generate shader
-    GLHelpers::ShaderSource generateSource =
+    GLHelpers::ShaderSource generateSource;
+    
+    generateSource.m_source =
     {
         {
             GL_VERTEX_SHADER, 
             {
-                Shaders::Common_Version,
                 Shaders::Common_Functions,
                 Shaders::Common_ColorSpace,
                 Shaders::DiffractionStarburstAlgorithm_Generate_VertexShader,
@@ -38,7 +39,6 @@ DiffractionStarburstAlgorithm::DiffractionStarburstAlgorithm(OpticalSystem* opti
         {
             GL_FRAGMENT_SHADER, 
             {
-                Shaders::Common_Version,
                 Shaders::Common_Functions,
                 Shaders::Common_ColorSpace,
                 Shaders::DiffractionStarburstAlgorithm_Generate_FragmentShader,
@@ -48,12 +48,13 @@ DiffractionStarburstAlgorithm::DiffractionStarburstAlgorithm(OpticalSystem* opti
     m_generateShader = GLHelpers::createShader(generateSource);
     
     // Create the render shader
-    GLHelpers::ShaderSource renderSource =
+    GLHelpers::ShaderSource renderSource;
+    
+    renderSource.m_source =
     {
         {
             GL_VERTEX_SHADER, 
             {
-                Shaders::Common_Version,
                 Shaders::Common_Functions,
                 Shaders::Common_ColorSpace,
                 Shaders::DiffractionStarburstAlgorithm_Render_VertexShader,
@@ -62,7 +63,6 @@ DiffractionStarburstAlgorithm::DiffractionStarburstAlgorithm(OpticalSystem* opti
         {
             GL_FRAGMENT_SHADER, 
             {
-                Shaders::Common_Version,
                 Shaders::Common_Functions,
                 Shaders::Common_ColorSpace,
                 Shaders::DiffractionStarburstAlgorithm_Render_FragmentShader,
@@ -92,8 +92,7 @@ DiffractionStarburstAlgorithm::~DiffractionStarburstAlgorithm()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool DiffractionStarburstAlgorithm::generateTexture(int width, int height, 
-    float minLambda, float maxLambda, float lambdaStep)
+bool DiffractionStarburstAlgorithm::generateTexture(TextureGenerationParameters parameters)
 {
     // The aperture FT texture
     GLuint apertureFT = 0;
@@ -121,7 +120,8 @@ bool DiffractionStarburstAlgorithm::generateTexture(int width, int height,
 	// Generate a texture object if it doesn't exist
     glGenTextures(1, &m_texture);
     glBindTexture(GL_TEXTURE_2D, m_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, parameters.m_textureWidth, 
+        parameters.m_textureHeight, 0, GL_RGBA, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -139,13 +139,13 @@ bool DiffractionStarburstAlgorithm::generateTexture(int width, int height,
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glDisable(GL_BLEND);
-	glViewport(0, 0, width, height);
+	glViewport(0, 0, parameters.m_textureWidth, parameters.m_textureHeight);
 	glUseProgram(m_generateShader);
 
 	// Compute the scale of the texture
-    GLHelpers::uploadUniform(m_generateShader, "fMinLambda", minLambda);
-    GLHelpers::uploadUniform(m_generateShader, "fMaxLambda", maxLambda);
-    GLHelpers::uploadUniform(m_generateShader, "fLambdaStep", lambdaStep);
+    GLHelpers::uploadUniform(m_generateShader, "fMinLambda", parameters.m_minWavelength);
+    GLHelpers::uploadUniform(m_generateShader, "fMaxLambda", parameters.m_maxWavelength);
+    GLHelpers::uploadUniform(m_generateShader, "fLambdaStep", parameters.m_wavelengthStep);
     GLHelpers::uploadUniform(m_generateShader, "fTextureLambda", 570.0f);
     GLHelpers::uploadUniform(m_generateShader, "fApertureDistance", apertureDist);
 
@@ -167,7 +167,8 @@ bool DiffractionStarburstAlgorithm::generateTexture(int width, int height,
 	glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
     
 	// Allocate memory for the pixels
-	glm::vec4* floatPixels = new glm::vec4[width * height];
+	glm::vec4* floatPixels = 
+        new glm::vec4[parameters.m_textureWidth * parameters.m_textureHeight];
 
 	// Extract the image
 	glBindTexture(GL_TEXTURE_2D, m_texture);
@@ -177,8 +178,8 @@ bool DiffractionStarburstAlgorithm::generateTexture(int width, int height,
 
 	// Upload the new image data the image
 	glBindTexture(GL_TEXTURE_2D, m_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, 
-        GL_FLOAT, floatPixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, parameters.m_textureWidth, 
+        parameters.m_textureHeight, 0, GL_RGBA, GL_FLOAT, floatPixels);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 

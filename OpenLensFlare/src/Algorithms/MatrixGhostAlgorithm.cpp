@@ -17,12 +17,13 @@ MatrixGhostAlgorithm::MatrixGhostAlgorithm(OpticalSystem* system, const GhostLis
     m_vao(0)
 {
     // Create the render shader
-    GLHelpers::ShaderSource renderSource =
+    GLHelpers::ShaderSource renderSource;
+    
+    renderSource.m_source =
     {
         {
             GL_VERTEX_SHADER, 
             {
-                Shaders::Common_Version,
                 Shaders::Common_Functions,
                 Shaders::Common_ColorSpace,
                 Shaders::MatrixGhostAlgorithm_RenderGhost_VertexShader,
@@ -31,7 +32,6 @@ MatrixGhostAlgorithm::MatrixGhostAlgorithm(OpticalSystem* system, const GhostLis
         {
             GL_FRAGMENT_SHADER, 
             {
-                Shaders::Common_Version,
                 Shaders::Common_Functions,
                 Shaders::Common_ColorSpace,
                 Shaders::MatrixGhostAlgorithm_RenderGhost_FragmentShader,

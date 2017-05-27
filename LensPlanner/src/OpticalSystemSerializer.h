@@ -9,10 +9,10 @@ class OpticalSystemSerializer
 public:
     OpticalSystemSerializer(QIODevice* io, OLEF::OpticalSystem* system, ImageLibrary* library);
     
-    /// Serializes the parameter optical system.
+    /// Serializes the underlying optical system.
     bool serialize();
 
-    /// Deserializes an optical system into the parameter object.
+    /// Deserializes an optical system into the underlying object.
     bool deserialize();
 
 private:

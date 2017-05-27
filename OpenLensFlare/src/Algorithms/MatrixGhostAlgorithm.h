@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../OpticalSystem.h"
-#include "../GhostList.h"
+#include "../Ghost.h"
 #include "../LightSource.h"
 #include "../GhostAlgorithm.h"
 

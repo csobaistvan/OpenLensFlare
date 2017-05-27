@@ -75,7 +75,7 @@ QVector<AttributeCellWidgetBase*> OpticalSystemEditor::getOpticalElementAttribut
     auto* element = &((*m_opticalSystem)[elemId]);
     return
     {
-        new AttributeCellElementType
+        new AttributeCellEnum<OLEF::OpticalSystemElement::ElementType>
         { 
             "Type",
             "",

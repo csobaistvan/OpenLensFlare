@@ -24,8 +24,27 @@ public:
     /// These objects are not copyable.
     DiffractionStarburstAlgorithm& operator=(const DiffractionStarburstAlgorithm& other) = delete;
     
+    /// Parameters for generating the starburst texture.
+    struct TextureGenerationParameters
+    {
+        /// Width of the generated texture.
+        int m_textureWidth = 512;
+
+        /// Height of the generated texture.
+        int m_textureHeight = 512;
+        
+        /// Starting wavelength for the composition.
+        float m_minWavelength = 380.0f;
+
+        /// Ending wavelength for the composition.
+        float m_maxWavelength = 780.0f;
+
+        /// Wavelength step size.
+        float m_wavelengthStep = 5.0f;
+    };
+
     /// Generates the starburst texture. Previous copies are discarded.
-    bool generateTexture(int width, int height, float minWl, float maxWl, float wlStep);
+    bool generateTexture(TextureGenerationParameters parameters = {});
 
     /// Renders the starburst corresponding to the parameter light source.
     void renderStarburst(const LightSource& light);
@@ -73,7 +92,8 @@ private:
     /// Whether the texture is from an external source or not.
     bool m_external;
 
-    /// A dummy vao to use.
+    /// A dummy vertex array to use, since OpenGL requires a valid object to be
+    /// bound, even if we don't actually use any vertex buffers.
     GLuint m_vao;
 
     /// The shader object used to generate the starburst texture.

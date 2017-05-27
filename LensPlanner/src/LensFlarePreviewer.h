@@ -12,37 +12,85 @@ public:
     explicit LensFlarePreviewer(OLEF::OpticalSystem* system, QWidget* parent = nullptr);
     ~LensFlarePreviewer();
 
-    void generateStarburst(int textureSize, float minWl, float maxWl, float wlStep);
+    /// Generates the diffraction starbust texture.
+    void generateStarburst();
 
-    /// Parameters for a light source to visualize.
-    struct LightSource
+    /// Computes parameters for the rendered ghosts.
+    void computeGhostParameters();
+
+    // Getters for the underlying objects.
+    ImageLibrary* getImageLibrary() const 
+    { return m_imageLibrary; }
+    
+    OLEF::DiffractionStarburstAlgorithm* getDiffractionStarburstAlgorithm() const 
+    { return m_diffractionStarburstAlgorithm; }
+    
+    OLEF::RayTraceGhostAlgorithm* getRayTraceGhostAlgorithm() const 
+    { return m_rayTraceGhostAlgorithm; }
+
+    /// Parameters for a lens flare layer to render.
+    struct Layer
     {
         /// Screen position of the light source.
-        glm::vec2 m_position = glm::vec2(0.0f, 0.0f);
+        glm::vec2 m_lightPosition = glm::vec2(0.0f, 0.0f);
 
         /// Light source incidence direction.
-        glm::vec3 m_direction = glm::vec3(0.0f, 0.0f, -1.0f);
+        glm::vec3 m_lightDirection = glm::vec3(0.0f, 0.0f, 1.0f);
 
         /// Color of the light source.
-        QColor m_color = QColor(Qt::white);
+        QColor m_lightColor = QColor(Qt::white);
 
         /// Diffuse intensity of the light source.
-        float m_intensity = 1.0f;
+        float m_lightIntensity = 1.0f;
 
         /// Size of the corresponding starburst.
         float m_starburstSize = 0.1f;
 
         /// Intensity of the corresponding starburst.
         float m_starburstIntensity = 1.0f;
+
+        /// Index of the first ghost to render.
+        int m_firstGhost = 1;
+
+        /// The number of ghosts to render.
+        int m_numGhosts = 0;
+
+        /// Intensity scaling value used to render the ghost.
+        float m_ghostIntensityScale = 1.0f;
+
+        /// Iris distance (mask texture) clip value.
+        float m_ghostDistanceClip = 0.95f;
+
+        /// Radius clipping value.
+        float m_ghostRadiusClip = 1.0f;
+
+        /// Intensity clipping value.
+        float m_ghostIntensityClip = 1.0f;
+
+        /// The render mode used to render these ghosts.
+        OLEF::RayTraceGhostAlgorithm::RenderMode m_ghostRenderMode;
+
+        /// The shading mode used to render these ghosts.
+        OLEF::RayTraceGhostAlgorithm::ShadingMode m_ghostShadingMode;
+
+        /// Whether precomputed ghost attributes should be used (when available) or not.
+        bool m_useGhostAttributes = true;
     };
 
     // Getters and setters for the visualization attributes
-    ImageLibrary* getImageLibrary() const { return m_imageLibrary; }
-    OLEF::StarburstAlgorithm* getStarburstAlgorithm() const { return m_starburstAlgorithm; }
-    OLEF::GhostAlgorithm* getGhostAlgorithm() const { return m_ghostAlgorithm; }
-    const QVector<LightSource>& getLightSources() const { return m_lightSources; }
+    int getStarburstTextureSize() const { return m_starburstTextureSize; }
+    float getStarburstMinWavelength() const { return m_starburstMinWavelength; }
+    float getStarburstMaxWavelength() const { return m_starburstMaxWavelength; }
+    float getStarburstWavelengthStep() const { return m_starburstWavelengthStep; }
+    const QVector<Layer>& getLayers() const { return m_layers; }
+    const QMap<float, OLEF::GhostList>& getPrecomputedGhosts() const { return m_precomputedGhosts; };
     
-    void setLightSources(const QVector<LightSource>& value) { m_lightSources = value; }
+    void setStarburstTextureSize(int value) { m_starburstTextureSize = value; }
+    void setStarburstMinWavelength(float value) { m_starburstMinWavelength = value; }
+    void setStarburstMaxWavelength(float value) { m_starburstMaxWavelength = value; }
+    void setStarburstWavelengthStep(float value) { m_starburstWavelengthStep = value; }
+    void setLayers(const QVector<Layer>& value) { m_layers = value; }
+    void setPrecomputedGhosts(const QMap<float, OLEF::GhostList>& value) {m_precomputedGhosts = value; };
 
     /// TextureAccessor interface
     GLuint uploadTexture(const QImage& image);
@@ -68,18 +116,30 @@ private:
     /// The image library that manages our textures.
     ImageLibrary* m_imageLibrary;
 
-    /// The algorithm to render the starburst.
-    OLEF::DiffractionStarburstAlgorithm* m_starburstAlgorithm;
-
-    /// The algorithm to render ghosts.
-    OLEF::GhostAlgorithm* m_ghostAlgorithm;
-
     /// Color of the background.
     QColor m_backgroundColor;
 
-    /// Ghosts to render.
-    OLEF::GhostList m_ghosts;
+    /// Size of the diffraction starburst texture.
+    int m_starburstTextureSize;
+
+    /// Starting wavelength of the diffraction starburst texture.
+    float m_starburstMinWavelength;
+    
+    /// Ending wavelength of the diffraction starburst texture.
+    float m_starburstMaxWavelength;
+
+    /// Wavelength step of the diffraction starburst texture.
+    float m_starburstWavelengthStep;
+
+    /// The diffraction starburst rendering algorithm.
+    OLEF::DiffractionStarburstAlgorithm* m_diffractionStarburstAlgorithm;
+
+    /// The ray traced ghost rendering algorithm.
+    OLEF::RayTraceGhostAlgorithm* m_rayTraceGhostAlgorithm;
+
+    /// Precomputed ghosts with their attributes.
+    QMap<float, OLEF::GhostList> m_precomputedGhosts;
 
     /// The list of light source objects used for previewing.
-    QVector<LightSource> m_lightSources;
+    QVector<Layer> m_layers;
 };

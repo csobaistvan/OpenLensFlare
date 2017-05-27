@@ -12,15 +12,18 @@ in float fRadius[];
 in float fIntensity[];
 
 // Outputs
-#ifdef GHOST_GENERATION
-out float fIrisDistance;
+out vec2 vParamGS;      // Coordinates of the originating ray on the pupil element
+out vec2 vUvGS;         // UV coordinates of the ray passing the aperture
+out float fRadiusGS;    // Relative radius
+out float fIntensityGS; // Transmitted energy factor
+out vec3 vColorGS;      // Channel of the color, scaled by the various scaling
+                        // factors (but not by fIntensityGS)
+
+// Additional outputs, for readback through transform feedback
+#ifdef PRECOMPUTATION
+out vec2 vPositionGS;    // Projected ray position on the sensor
+out float fIrisDistanceGS; // Iris texture sampled by the UV
 #endif
-out vec2 vParamGS;
-out vec2 vPositionGS;
-out vec2 vUvGS;
-out float fRadiusGS;
-out float fIntensityGS;
-out vec3 vColorGS;
 
 void main()
 {    
@@ -41,22 +44,22 @@ void main()
     // Compute the scaled intensity for the triangle
     float intensity = pupilArea / wholePupilArea / sensorArea;
     
-    // Write out the vertices
+    // Generate vertices
     for (int i = 0; i < 3; ++i)
     {
         vParamGS = vParam[i];
-        vPositionGS = vPos[i];
         vUvGS = vUv[i];
         fRadiusGS = fRadius[i];
         fIntensityGS = clamp(fIntensity[i], 0, 1);
+        vColorGS = lambda2RGB(fLambda, 1.0) * intensity * fIntensityScale;
+        gl_Position = vec4(vPos[i], 0, 1);
         
-        #ifdef GHOST_GENERATION
+        #ifdef PRECOMPUTATION
         vec2 normalizedUv = clamp(vUv[i], vec2(-1.0), vec2(1.0)) * 0.5 + 0.5;
         fIrisDistance = texture(sAperture, normalizedUv).r;
+        vPositionGS = vPos[i];
         #endif
-        
-        vColorGS = lambda2RGB(fLambda, 1.0) * intensity * fIntensityScale;
-        gl_Position = vec4(vPositionGS, 0, 1);
+
         EmitVertex();
     }
         

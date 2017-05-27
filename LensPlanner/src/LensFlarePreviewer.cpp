@@ -12,10 +12,13 @@ static QOpenGLFunctions_3_3_Core* getGLFunctions()
 LensFlarePreviewer::LensFlarePreviewer(OLEF::OpticalSystem* system, QWidget* parent):
     QOpenGLWidget(parent),
     m_opticalSystem(system),
-    m_ghosts(system),
-    m_starburstAlgorithm(nullptr),
-    m_ghostAlgorithm(nullptr),
-    m_imageLibrary(new ImageLibrary(this, this))
+    m_imageLibrary(new ImageLibrary(this, this)),
+    m_diffractionStarburstAlgorithm(nullptr),
+    m_starburstTextureSize(512),
+    m_starburstMinWavelength(390.0f),
+    m_starburstMaxWavelength(780.0f),
+    m_starburstWavelengthStep(5.0f),
+    m_rayTraceGhostAlgorithm(nullptr)
 {
     // Initialize the GL format
     QSurfaceFormat fmt;
@@ -45,15 +48,15 @@ LensFlarePreviewer::~LensFlarePreviewer()
     glewInit();
 
     // Release the starburst renderer object.
-    if (m_starburstAlgorithm)
+    if (m_diffractionStarburstAlgorithm)
     {
-        delete m_starburstAlgorithm;
+        delete m_diffractionStarburstAlgorithm;
     }
 
     // Release the ghost renderer object.
-    if (m_ghostAlgorithm)
+    if (m_rayTraceGhostAlgorithm)
     {
-        delete m_ghostAlgorithm;
+        delete m_rayTraceGhostAlgorithm;
     }
 
     // Release the created textures
@@ -64,14 +67,131 @@ LensFlarePreviewer::~LensFlarePreviewer()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void LensFlarePreviewer::generateStarburst(int textureSize, float minWl, float maxWl, float wlStep)
+void LensFlarePreviewer::generateStarburst()
 {
     // Make sure it is not called before the objects are initialized
-    if (m_starburstAlgorithm == nullptr)
+    if (m_diffractionStarburstAlgorithm == nullptr)
         return;
 
+    // Setup the required parameter object
+    OLEF::DiffractionStarburstAlgorithm::TextureGenerationParameters parameters;
+
+    parameters.m_textureWidth = m_starburstTextureSize;
+    parameters.m_textureHeight = m_starburstTextureSize;
+    parameters.m_minWavelength = m_starburstMinWavelength;
+    parameters.m_maxWavelength = m_starburstMaxWavelength;
+    parameters.m_wavelengthStep = m_starburstWavelengthStep;
+
     // Generate the texture
-    m_starburstAlgorithm->generateTexture(textureSize, textureSize, minWl, maxWl, wlStep);
+    m_diffractionStarburstAlgorithm->generateTexture(parameters);
+
+    // Update the view
+    update();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void LensFlarePreviewer::computeGhostParameters()
+{
+    // Generate the starting ghost list
+    OLEF::GhostList originalGhosts = m_opticalSystem->generateGhosts(2, false);
+
+    // Process each possible angle
+    //
+    // TODO: don't use pre-baked angles!
+    QMap<float, OLEF::GhostList> rawValues;
+
+    for (int i = 0; i < 181; ++i)
+    {
+        // Current angle
+        float angle = i * 0.5f;
+
+        // Construct the parameter object
+        OLEF::RayTraceGhostAlgorithm::GhostAttribComputeParams computeParams;
+
+        computeParams.m_angle = angle;
+        computeParams.m_boundingPasses = 3;
+        computeParams.m_boundingRays = { 33, 33, 33};
+        computeParams.m_rayPresets = { 5, 16, 32, 64, 128 };
+
+        // Compute the ghost attributes
+        OLEF::GhostList currentGhosts = 
+            m_rayTraceGhostAlgorithm->computeGhostAttributes(
+                originalGhosts, computeParams);
+
+        // Store it in the map
+        rawValues[angle] = currentGhosts;
+    }
+
+    // Use neighbouring values to find looser bounds, to avoid clipping
+    m_precomputedGhosts = rawValues;
+
+    for (auto it = rawValues.begin() + 1; it != rawValues.end() - 1; ++it)
+    {
+        // Extract the current, previous and next ghost lists
+        const auto& prevGhosts = (it - 1).value();
+        const auto& currentGhosts = it.value();
+        const auto& nextGhosts = (it + 1).value();
+        auto mergedGhosts = currentGhosts;
+
+        // Process each ghost on the list
+        for (size_t i = 0; i < mergedGhosts.size(); ++i)
+        {
+            // Extract the previous, current and next pupil bounds
+            OLEF::Ghost::BoundingRect rawPupilBounds[3] =
+            {
+                prevGhosts[i].getPupilBounds(),
+                currentGhosts[i].getPupilBounds(),
+                nextGhosts[i].getPupilBounds(),
+            };
+            
+            // Extract the previous, current and next sensor bounds
+            OLEF::Ghost::BoundingRect rawSensorBounds[3] =
+            {
+                prevGhosts[i].getSensorBounds(),
+                currentGhosts[i].getSensorBounds(),
+                nextGhosts[i].getSensorBounds(),
+            };
+
+            // Output pupil and sensor values
+            OLEF::Ghost::BoundingRect outPupilBounds;
+            OLEF::Ghost::BoundingRect outSensorBounds;
+
+            // Process the X/W and Y/H channels of both bounds
+            for (int i = 0; i < 2; ++i)
+            {
+                outPupilBounds[0][i] = glm::min(
+                    rawPupilBounds[0][0][i], glm::min(
+                    rawPupilBounds[1][0][i],
+                    rawPupilBounds[2][0][i]
+                    ));
+                outPupilBounds[1][i] = glm::max(
+                    rawPupilBounds[0][1][i], glm::max(
+                    rawPupilBounds[1][1][i],
+                    rawPupilBounds[2][1][i]
+                    ));
+                outSensorBounds[0][i] = glm::min(
+                    rawSensorBounds[0][0][i], glm::min(
+                    rawSensorBounds[1][0][i],
+                    rawSensorBounds[2][0][i]
+                    ));
+                outSensorBounds[1][i] = glm::max(
+                    rawSensorBounds[0][1][i], glm::max(
+                    rawSensorBounds[1][1][i],
+                    rawSensorBounds[2][1][i]
+                    ));
+            }
+
+            // Store the computed values
+            mergedGhosts[i].setPupilBounds(outPupilBounds);
+            mergedGhosts[i].setPupilBounds(outSensorBounds);
+        }
+
+        // Store the merged ghost list
+        m_precomputedGhosts[it.key()] = mergedGhosts;
+    }
+
+    // Update the view
+    update();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,13 +203,8 @@ void LensFlarePreviewer::update()
 ////////////////////////////////////////////////////////////////////////////////
 void LensFlarePreviewer::opticalSystemChanged()
 {
-    // There is only one ghost algorithm right now, so this is safe
-    OLEF::RayTraceGhostAlgorithm* ghost =
-        (OLEF::RayTraceGhostAlgorithm*) m_ghostAlgorithm;
-
-    // Refresh the ghost list.
-    m_ghosts = OLEF::GhostList(m_opticalSystem);
-    ghost->setGhostList(m_ghosts);
+    // Clear the precomputed attribute set
+    m_precomputedGhosts.clear();
 
     // Regenerate the image
     update();
@@ -184,16 +299,11 @@ void LensFlarePreviewer::initializeGL()
     //      these objects into the MainWindow instance, and manage them from there
 
     // Create the starburst renderer.
-    OLEF::DiffractionStarburstAlgorithm* diffStarburst = 
-        new OLEF::DiffractionStarburstAlgorithm(m_opticalSystem);
+    m_diffractionStarburstAlgorithm = new OLEF::DiffractionStarburstAlgorithm(
+        m_opticalSystem);
 
     /// Create the ray trace ghost algorithm
-    OLEF::RayTraceGhostAlgorithm* rayTraceGhost = 
-        new OLEF::RayTraceGhostAlgorithm(m_opticalSystem, m_ghosts);
-    
-    // Store the created objects.
-    m_starburstAlgorithm = diffStarburst;
-    m_ghostAlgorithm = rayTraceGhost;
+    m_rayTraceGhostAlgorithm = new OLEF::RayTraceGhostAlgorithm(m_opticalSystem);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -215,27 +325,63 @@ void LensFlarePreviewer::paintGL()
     f->glClear(GL_COLOR_BUFFER_BIT);
 
     // Render the starburst
-    for (auto lightSource: m_lightSources)
+    for (auto layer: m_layers)
     {
         // Construct the corresponding light source object
-        OLEF::LightSource lightSourceObject;
+        OLEF::LightSource lightSource;
 
-        lightSourceObject.setScreenPosition(lightSource.m_position);
-        lightSourceObject.setIncidenceDirection(lightSource.m_direction);
-        lightSourceObject.setDiffuseColor(glm::vec3(
-            lightSource.m_color.redF(), 
-            lightSource.m_color.greenF(), 
-            lightSource.m_color.blueF()
+        lightSource.setScreenPosition(layer.m_lightPosition);
+        lightSource.setIncidenceDirection(glm::normalize(layer.m_lightDirection));
+        lightSource.setDiffuseColor(glm::vec3(
+            layer.m_lightColor.redF(), 
+            layer.m_lightColor.greenF(), 
+            layer.m_lightColor.blueF()
         ));
-        lightSourceObject.setDiffuseIntensity(lightSource.m_intensity);
+        lightSource.setDiffuseIntensity(layer.m_lightIntensity);
 
-        // Set the per-starburst parameters and render it
-        m_starburstAlgorithm->setSize(lightSource.m_starburstSize);
-        m_starburstAlgorithm->setIntensity(lightSource.m_starburstIntensity);
+        // Set the per-light starburst parameters
+        m_diffractionStarburstAlgorithm->setSize(layer.m_starburstSize);
+        m_diffractionStarburstAlgorithm->setIntensity(layer.m_starburstIntensity);
         
-        m_starburstAlgorithm->renderStarburst(lightSourceObject);
+        // Render the starbursts
+        m_diffractionStarburstAlgorithm->renderStarburst(lightSource);
 
-        // Render the ghosts
-        m_ghostAlgorithm->renderAllGhosts(lightSourceObject);
+        // Generate the list of ghosts to render
+        OLEF::GhostList allGhosts;
+
+        // Re-use the precomputed values if we can
+        if (layer.m_useGhostAttributes)
+        {
+            float angle = glm::acos(glm::dot(
+                -lightSource.getIncidenceDirection(), 
+                glm::vec3(0.0f, 0.0f, -1.0f)));
+
+            auto it = m_precomputedGhosts.lowerBound(angle);
+            if (it != m_precomputedGhosts.end())
+                allGhosts = it.value();
+        }
+
+        // Generate a fresh list if we couldn't re-use anything
+        if (!layer.m_useGhostAttributes || allGhosts.empty())
+        {
+            allGhosts = m_opticalSystem->generateGhosts(2, false);
+        }
+        
+        int firstGhost = std::min(layer.m_firstGhost - 1, (int) allGhosts.size());
+        int lastGhost = std::min(layer.m_firstGhost + layer.m_numGhosts - 1, (int) allGhosts.size());
+
+        OLEF::GhostList ghosts(allGhosts.begin() + firstGhost, 
+            allGhosts.begin() + lastGhost);
+
+        // Set the per-light ghost parameters        
+        m_rayTraceGhostAlgorithm->setIntensityScale(layer.m_ghostIntensityScale);
+        m_rayTraceGhostAlgorithm->setRenderMode(layer.m_ghostRenderMode);
+        m_rayTraceGhostAlgorithm->setShadingMode(layer.m_ghostShadingMode);
+        m_rayTraceGhostAlgorithm->setDistanceClip(layer.m_ghostDistanceClip);
+        m_rayTraceGhostAlgorithm->setRadiusClip(layer.m_ghostRadiusClip);
+        m_rayTraceGhostAlgorithm->setIntensityClip(layer.m_ghostIntensityClip);
+
+        // Render the generated ghosts
+        m_rayTraceGhostAlgorithm->renderGhosts(lightSource, ghosts);
     }
 }

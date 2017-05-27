@@ -97,8 +97,18 @@ namespace GLHelpers
         glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(val));
     }
 
-    /// Shader source type
-    using ShaderSource = std::map<GLenum, std::vector<const char*>>;
+    /// Structure holding the shader parameters
+    struct ShaderSource
+    {
+        /// The source code for the shader stages.
+        std::map<GLenum, std::vector<const char*>> m_source;
+        
+        /// List of defines to set.
+        std::vector<const char*> m_defines;
+
+        /// List of varying attribute names to capture.
+        std::vector<const char*> m_varyings;
+    };
 
     /// Creates a shader from the provided shader source.
     inline GLuint createShader(const ShaderSource& source)
@@ -110,12 +120,22 @@ namespace GLHelpers
         std::vector<GLuint> shaders;
 
         // Create the individual shaders.
-        for (const auto& shaderSource: source)
+        for (const auto& shaderSource: source.m_source)
         {
+            std::vector<const char*> src;
+            src.reserve(1 + shaderSource.second.size() + source.m_defines.size() * 2);
+
+            src.push_back("#version 330\n");
+            for (auto define: source.m_defines)
+            {
+                src.push_back(define);
+                src.push_back("\n");
+            }
+            src.insert(src.end(), shaderSource.second.begin(), shaderSource.second.end());
+
             // Create the shader, set the source, compile
 	        GLuint shader = glCreateShader(shaderSource.first);
-            glShaderSource(shader, (GLsizei) shaderSource.second.size(), 
-                shaderSource.second.data(), NULL);
+            glShaderSource(shader, (GLsizei) src.size(), src.data(), NULL);
             glCompileShader(shader);
             
             // Make sure it compiled successfully
@@ -142,6 +162,13 @@ namespace GLHelpers
         for (auto shader: shaders)
         {
             glAttachShader(program, shader);
+        }
+        
+        // Bind any varyings
+        if (!source.m_varyings.empty())
+        {
+            glTransformFeedbackVaryings(program, source.m_varyings.size(), 
+                source.m_varyings.data(), GL_INTERLEAVED_ATTRIBS);
         }
 
         // Link the program.

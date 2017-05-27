@@ -14,8 +14,10 @@
             <radius>65.220001</radius>
             <refractiveIndex>1.500000</refractiveIndex>
             <abbeNumber>50.000000</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -24,8 +26,10 @@
             <radius>-62.029999</radius>
             <refractiveIndex>1.500000</refractiveIndex>
             <abbeNumber>50.000000</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>lensSpherical</type>
@@ -34,8 +38,10 @@
             <radius>-1240.670044</radius>
             <refractiveIndex>1.000000</refractiveIndex>
             <abbeNumber>89.300003</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
         <element>
             <type>apertureStop</type>
@@ -44,10 +50,10 @@
             <radius>0.0</radius>
             <refractiveIndex>1.000000</refractiveIndex>
             <abbeNumber>89.300003</abbeNumber>
-            <coatingLambda>0.000000</coatingLambda>
-            <coatingIor>0.000000</coatingIor>
-			<mask>apertureDist.bmp</mask>
-			<maskFT>apertureFT.bmp</maskFT>
+            <coatingLambda>620.000000</coatingLambda>
+            <coatingIor>1.380000</coatingIor>
+            <mask>apertureDist.bmp</mask>
+            <maskFT>apertureFT.bmp</maskFT>
         </element>
         <element>
             <type>sensor</type>
@@ -58,6 +64,8 @@
             <abbeNumber>89.300003</abbeNumber>
             <coatingLambda>0.000000</coatingLambda>
             <coatingIor>0.000000</coatingIor>
+            <mask></mask>
+            <maskFT></maskFT>
         </element>
     </elements>
 </opticalSystem>

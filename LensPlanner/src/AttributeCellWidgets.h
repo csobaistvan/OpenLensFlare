@@ -5,6 +5,9 @@
 #include "ImageLibrary.h"
 
 /// Data related to an editor cell.
+///
+/// TODO: update the views automatically while the editor is open, to give a 
+///       preview of the changes
 template<typename AttribType, typename... DataTypes>
 class AttributeCellWidgetTypedBase: public AttributeCellWidgetBase
 {
@@ -13,6 +16,14 @@ public:
     using Getter = std::function<AttribType()>;
     using Setter = std::function<void (AttribType)>;
 
+    /// The various flags a widget may have.
+    ///
+    /// TODO: handle these flags properly.
+    enum Flags
+    {
+        NORMALIZED_FLAG,
+    };
+
     /// Empty default conclassor.
     AttributeCellWidgetTypedBase()
     {}
@@ -20,20 +31,25 @@ public:
     /// Conclasss a cell data object with the specified name, a pointer to the
     /// attribute and the specified data.
     AttributeCellWidgetTypedBase(const QString& name, const QString& description,
-        AttribType* attrib, DataTypes... data):
+        AttribType* attrib, unsigned long long flags, DataTypes... data):
             m_name(name),
+            m_description(description),
             m_getter{[=]() { return *attrib; }},
             m_setter{[=](const auto& value) { *attrib = value; }},
+            m_flags(flags),
             m_data(std::forward<DataTypes>(data)...)
     {}
 
     /// Conclasss a cell data object with the specified name, a getter/setter
     /// pair and the specified data.
     AttributeCellWidgetTypedBase(const QString& name, const QString& description, 
-        const Getter& getter, const Setter& setter, DataTypes... data):
+        const Getter& getter, const Setter& setter, unsigned long long flags, 
+        DataTypes... data):
             m_name(name),
+            m_description(description),
             m_getter(getter),
             m_setter(setter),
+            m_flags(flags),
             m_data(std::forward<DataTypes>(data)...)
     {}
 
@@ -48,6 +64,9 @@ public:
 
     /// Setter of the attribute.
     Setter m_setter;
+
+    /// Various flags.
+    unsigned long long m_flags;
 
     /// Extra data being held in the object.
     std::tuple<DataTypes...> m_data;
@@ -65,12 +84,12 @@ public:
 
     AttributeCellEnum(const QString& name, const QString& description, 
         T* attrib, const QStringList& names):
-            AttributeCellWidgetTypedBase(name, description, attrib, names)
+            AttributeCellWidgetTypedBase(name, description, attrib, 0, names)
     {}
 
     AttributeCellEnum(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter, const QStringList& names):
-            AttributeCellWidgetTypedBase(name, description, getter, setter, names)
+            AttributeCellWidgetTypedBase(name, description, getter, setter, 0, names)
     {}
 
     // AttributeCellWidgetBase methods
@@ -126,10 +145,6 @@ public:
     }
 };
 
-/// Optical system element type attribute type.
-using AttributeCellElementType = 
-    AttributeCellEnum<OLEF::OpticalSystemElement::ElementType>;
-
 ////////////////////////////////////////////////////////////////////////////////
 /// Bool attribute cell type.
 class AttributeCellBool: public AttributeCellWidgetTypedBase<bool>
@@ -141,12 +156,12 @@ public:
 
     AttributeCellBool(const QString& name, const QString& description,
          bool* attrib):
-            AttributeCellWidgetTypedBase(name, description, attrib)
+            AttributeCellWidgetTypedBase(name, description, attrib, 0)
     {}
 
     AttributeCellBool(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter):
-            AttributeCellWidgetTypedBase(name, description, getter, setter)
+            AttributeCellWidgetTypedBase(name, description, getter, setter, 0)
     {}
 
     // AttributeCellWidgetBase methods
@@ -203,12 +218,12 @@ public:
 
     AttributeCellInt(const QString& name, const QString& description,
          int* attrib, int min, int max, int step):
-            AttributeCellWidgetTypedBase(name, description, attrib, min, max, step)
+            AttributeCellWidgetTypedBase(name, description, attrib, 0, min, max, step)
     {}
 
     AttributeCellInt(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter, int min, int max, int step):
-            AttributeCellWidgetTypedBase(name, description, getter, setter, min, max, step)
+            AttributeCellWidgetTypedBase(name, description, getter, setter, 0, min, max, step)
     {}
 
     // AttributeCellWidgetBase methods
@@ -268,12 +283,12 @@ public:
 
     AttributeCellFloat(const QString& name, const QString& description,
          float* attrib, float min, float max, float step):
-            AttributeCellWidgetTypedBase(name, description, attrib, min, max, step)
+            AttributeCellWidgetTypedBase(name, description, attrib, 0, min, max, step)
     {}
 
     AttributeCellFloat(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter, float min, float max, float step):
-            AttributeCellWidgetTypedBase(name, description, getter, setter, min, max, step)
+            AttributeCellWidgetTypedBase(name, description, getter, setter, 0, min, max, step)
     {}
 
     // AttributeCellWidgetBase methods
@@ -333,12 +348,12 @@ public:
 
     AttributeCellTexture(const QString& name, const QString& description,
          GLuint* attrib, ImageLibrary* imageLibrary):
-            AttributeCellWidgetTypedBase(name, description, attrib, imageLibrary)
+            AttributeCellWidgetTypedBase(name, description, attrib, 0, imageLibrary)
     {}
 
     AttributeCellTexture(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter, ImageLibrary* imageLibrary):
-            AttributeCellWidgetTypedBase(name, description, getter, setter, imageLibrary)
+            AttributeCellWidgetTypedBase(name, description, getter, setter, 0, imageLibrary)
     {}
 
     // AttributeCellWidgetBase methods
@@ -426,12 +441,12 @@ public:
 
     AttributeCellString(const QString& name, const QString& description, 
         std::string* attrib):
-            AttributeCellWidgetTypedBase(name, description, attrib)
+            AttributeCellWidgetTypedBase(name, description, attrib, 0)
     {}
 
     AttributeCellString(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter):
-            AttributeCellWidgetTypedBase(name, description, getter, setter)
+            AttributeCellWidgetTypedBase(name, description, getter, setter, 0)
     {}
 
     // AttributeCellWidgetBase methods
@@ -488,12 +503,12 @@ public:
 
     AttributeCellColor(const QString& name, const QString& description,
          QColor* attrib):
-            AttributeCellWidgetTypedBase(name, description, attrib)
+            AttributeCellWidgetTypedBase(name, description, attrib, 0)
     {}
 
     AttributeCellColor(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter):
-            AttributeCellWidgetTypedBase(name, description, getter, setter)
+            AttributeCellWidgetTypedBase(name, description, getter, setter, 0)
     {}
 
     // AttributeCellWidgetBase methods
@@ -633,13 +648,13 @@ public:
 
     AttributeCellVector(const QString& name, const QString& description,
          VectorType* attrib, VectorType min, VectorType max, VectorType step):
-            AttributeCellWidgetTypedBase(name, description, attrib, min, max, step)
+            AttributeCellWidgetTypedBase(name, description, attrib, 0, min, max, step)
     {}
 
     AttributeCellVector(const QString& name, const QString& description, 
         const Getter& getter, const Setter& setter, 
         VectorType min, VectorType max, VectorType step):
-            AttributeCellWidgetTypedBase(name, description, getter, setter, min, max, step)
+            AttributeCellWidgetTypedBase(name, description, getter, setter, 0, min, max, step)
     {}
 
     // AttributeCellWidgetBase methods

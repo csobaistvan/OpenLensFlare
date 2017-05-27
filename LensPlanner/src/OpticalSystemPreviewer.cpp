@@ -427,10 +427,14 @@ void OpticalSystemPreviewer::generateRayGeometry()
     // Process each ray batch
 	for (const auto& ray: m_raysToDraw)
     {
-        // Trace each individual ray
-        for (int r = 0; r < ray.m_rayCount; ++r)
+        // Make sure it references a valid ghost
+        if (m_opticalSystem->isValidGhost(ray.m_ghost))
         {
-            traceRay(ray, r);
+            // Trace each individual ray
+            for (int r = 0; r < ray.m_rayCount; ++r)
+            {
+                traceRay(ray, r);
+            }
         }
     }
 }

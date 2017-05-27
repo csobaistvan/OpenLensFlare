@@ -11,7 +11,8 @@ QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getGlobalAttribute
         {
             "Starburst Texture Size",
             "",
-            &m_starburstTextureSize,
+            std::bind(&LensFlarePreviewer::getStarburstTextureSize, std::ref(*m_previewer)),
+            std::bind(&LensFlarePreviewer::setStarburstTextureSize, std::ref(*m_previewer), std::placeholders::_1),
             128,
             4096,
             1,
@@ -20,7 +21,8 @@ QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getGlobalAttribute
         {
             "Starburst Start Lambda",
             "",
-            &m_starburstMinWl,
+            std::bind(&LensFlarePreviewer::getStarburstMinWavelength, std::ref(*m_previewer)),
+            std::bind(&LensFlarePreviewer::setStarburstMinWavelength, std::ref(*m_previewer), std::placeholders::_1),
             380.0f,
             780.0f,
             1.0f,
@@ -29,7 +31,8 @@ QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getGlobalAttribute
         {
             "Starburst End Lambda",
             "",
-            &m_starburstMaxWl,
+            std::bind(&LensFlarePreviewer::getStarburstMaxWavelength, std::ref(*m_previewer)),
+            std::bind(&LensFlarePreviewer::setStarburstMaxWavelength, std::ref(*m_previewer), std::placeholders::_1),
             380.0f,
             780.0f,
             1.0f,
@@ -38,52 +41,51 @@ QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getGlobalAttribute
         {
             "Starburst Lambda Step",
             "",
-            &m_starburstWlStep,
+            std::bind(&LensFlarePreviewer::getStarburstWavelengthStep, std::ref(*m_previewer)),
+            std::bind(&LensFlarePreviewer::setStarburstWavelengthStep, std::ref(*m_previewer), std::placeholders::_1),
             1.0f,
             50.0f,
             1.0f,
         },
-        // * lens flare algorithm
-        // * lens flare visualization modes (UV, relative radius, bounds, etc.)
     };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// List of all the light source attributes.
 // TODO: these leak!
-QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getLightSourceAttributes(int lightSourceId)
+QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getLayerAttributes(int layerId)
 {
     return
     {
         new AttributeCellVec2
         {
-            "Position",
+            "Light Position",
             "",
-            &m_lightSources[lightSourceId].m_position,
+            &m_layers[layerId].m_lightPosition,
             glm::vec2(-1.0f),
             glm::vec2(1.0f),
             glm::vec2(0.01f),
         },
         new AttributeCellVec3
         {
-            "Incidence Direction",
+            "Light Incidence Direction",
             "",
-            &m_lightSources[lightSourceId].m_direction,
+            &m_layers[layerId].m_lightDirection,
             glm::vec3(-1.0f),
             glm::vec3(1.0f),
             glm::vec3(0.01f),
         },
         new AttributeCellColor
         {
-            "Color",
+            "Light Color",
             "",
-            &m_lightSources[lightSourceId].m_color,
+            &m_layers[layerId].m_lightColor,
         },
         new AttributeCellFloat
         {
-            "Intensity",
+            "Light Intensity",
             "",
-            &m_lightSources[lightSourceId].m_intensity,
+            &m_layers[layerId].m_lightIntensity,
             0.0f,
             1000.0f,
             0.01f,
@@ -92,7 +94,7 @@ QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getLightSourceAttr
         {
             "Starburst Scale",
             "",
-            &m_lightSources[lightSourceId].m_starburstSize,
+            &m_layers[layerId].m_starburstSize,
             0.0f,
             1.0f,
             0.01f,
@@ -101,10 +103,103 @@ QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getLightSourceAttr
         {
             "Starburst Intensity",
             "",
-            &m_lightSources[lightSourceId].m_starburstIntensity,
+            &m_layers[layerId].m_starburstIntensity,
             0.0f,
             100000.0f,
             0.1f,
+        },
+        new AttributeCellInt
+        {
+            "First Ghost",
+            "",
+            &m_layers[layerId].m_firstGhost,
+            1,
+            1000,
+            1,
+        },
+        new AttributeCellInt
+        {
+            "Number of Ghosts",
+            "",
+            &m_layers[layerId].m_numGhosts,
+            0,
+            1000,
+            1,
+        },
+        new AttributeCellFloat
+        {
+            "Starburst Intensity",
+            "",
+            &m_layers[layerId].m_starburstIntensity,
+            0.0f,
+            100000.0f,
+            0.1f,
+        },
+        new AttributeCellFloat
+        {
+            "Ghost Intensity Scale",
+            "",
+            &m_layers[layerId].m_ghostIntensityScale,
+            0.0f,
+            100000.0f,
+            0.1f,
+        },
+        new AttributeCellFloat
+        {
+            "Ghost Iris Clip",
+            "",
+            &m_layers[layerId].m_ghostDistanceClip,
+            0.0f,
+            100.0f,
+            0.1f,
+        },
+        new AttributeCellFloat
+        {
+            "Ghost Radius Clip",
+            "",
+            &m_layers[layerId].m_ghostRadiusClip,
+            0.0f,
+            100.0f,
+            0.1f,
+        },
+        new AttributeCellFloat
+        {
+            "Ghost Intensity Clip",
+            "",
+            &m_layers[layerId].m_ghostIntensityClip,
+            0.0f,
+            100.0f,
+            0.1f,
+        },
+        new AttributeCellEnum<OLEF::RayTraceGhostAlgorithm::RenderMode>
+        { 
+            "Ghost Render Mode",
+            "",
+            &m_layers[layerId].m_ghostRenderMode,
+            {
+                "Projected Ghost",
+                "Pupil Grid",
+            },
+        },
+        new AttributeCellEnum<OLEF::RayTraceGhostAlgorithm::ShadingMode>
+        { 
+            "Ghost Shading Mode",
+            "",
+            &m_layers[layerId].m_ghostShadingMode,
+            {
+                "Shaded",
+                "Uncolored",
+                "Unshaded",
+                "Pupil Coordinates",
+                "UV Coordinates",
+                "Relative Radius",
+            },
+        },
+        new AttributeCellBool
+        {
+            "Use Ghost Precomputation",
+            "",
+            &m_layers[layerId].m_useGhostAttributes,
         },
     };
 }
@@ -112,11 +207,7 @@ QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getLightSourceAttr
 ////////////////////////////////////////////////////////////////////////////////
 LensFlarePreviewProperties::LensFlarePreviewProperties(LensFlarePreviewer* previewer, QWidget* parent):
     QWidget(parent),
-    m_previewer(previewer),
-    m_starburstTextureSize(512),
-    m_starburstMinWl(390.0f),
-    m_starburstMaxWl(780.0f),
-    m_starburstWlStep(5.0f)
+    m_previewer(previewer)
 {
     // Create the tree and the layout
     createToolBar();
@@ -163,17 +254,17 @@ void LensFlarePreviewProperties::update()
     }
 
     // Refresh the elements
-    for (int lightSourceId = 0; lightSourceId < m_lightSources.size(); ++lightSourceId)
+    for (int layerId = 0; layerId < m_layers.size(); ++layerId)
     {
         // Extract the appropriate root item.
-        QStandardItem* header = root->child(lightSourceId + 1);
-        header->setText(QString("Light Source #%0").arg(lightSourceId + 1));
+        QStandardItem* header = root->child(layerId + 1);
+        header->setText(QString("Light Source #%0").arg(layerId + 1));
 
         // Add the attributes.
-        const auto& lightSourceAttributes = getLightSourceAttributes(lightSourceId);
-        for (int attribId = 0; attribId < lightSourceAttributes.size(); ++attribId)
+        const auto& layerAttributes = getLayerAttributes(layerId);
+        for (int attribId = 0; attribId < layerAttributes.size(); ++attribId)
         {
-            updateTreeAttribute(lightSourceAttributes[attribId],
+            updateTreeAttribute(layerAttributes[attribId],
                 header->child(attribId, 0),
                 header->child(attribId, 1));
         }
@@ -189,9 +280,7 @@ void LensFlarePreviewProperties::update()
 ////////////////////////////////////////////////////////////////////////////////
 void LensFlarePreviewProperties::itemChanged(QStandardItem* item)
 {
-    m_previewer->setLightSources(m_lightSources);
-    m_previewer->generateStarburst(m_starburstTextureSize, 
-        m_starburstMinWl, m_starburstMaxWl, m_starburstWlStep);
+    m_previewer->setLayers(m_layers);
     m_previewer->update();
 }
 
@@ -209,10 +298,10 @@ void LensFlarePreviewProperties::addItem()
     // selected.row() is always 1 higher than the element index due to the 
     // first 'Attributes' row, so we can use it to append after the selected 
     // element.
-    auto dstId = (selected.isValid()) ? selected.row() : m_lightSources.size();
+    auto dstId = (selected.isValid()) ? selected.row() : m_layers.size();
     
     // Append to the list
-    m_lightSources.insert(m_lightSources.begin() + dstId, {});
+    m_layers.insert(m_layers.begin() + dstId, {});
 
     // Create its item.
     createTreeItem(dstId);
@@ -239,7 +328,7 @@ void LensFlarePreviewProperties::duplicateItem()
         return;
     
     // Append to the list
-    m_lightSources.insert(m_lightSources.begin() + selected.row(), m_lightSources[selected.row() - 1]);
+    m_layers.insert(m_layers.begin() + selected.row(), m_layers[selected.row() - 1]);
 
     // Create its item.
     createTreeItem(selected.row());
@@ -269,7 +358,7 @@ void LensFlarePreviewProperties::upItem()
     int top = selected.row() - 2, bot = selected.row() - 1;
 
     // Swap the elements.
-    std::iter_swap(m_lightSources.begin() + top, m_lightSources.begin() + bot);
+    std::iter_swap(m_layers.begin() + top, m_layers.begin() + bot);
 
     /// Extract the root item
     QStandardItem* root = m_treeModel->invisibleRootItem();
@@ -301,14 +390,14 @@ void LensFlarePreviewProperties::downItem()
         selected = tmp;
 
     // Make sure a valid element is selected
-    if (!selected.isValid() || selected.row() < 1 || selected.row() == m_lightSources.size())
+    if (!selected.isValid() || selected.row() < 1 || selected.row() == m_layers.size())
         return;
     
     // Top and bottom indices
     int top = selected.row() - 1, bot = selected.row();
 
     // Swap the elements.
-    std::iter_swap(m_lightSources.begin() + top, m_lightSources.begin() + bot);
+    std::iter_swap(m_layers.begin() + top, m_layers.begin() + bot);
 
     /// Extract the root item
     QStandardItem* root = m_treeModel->invisibleRootItem();
@@ -344,7 +433,7 @@ void LensFlarePreviewProperties::deleteItem()
         return;
     
     // Erase the selected element from the list
-    m_lightSources.erase(m_lightSources.begin() + selected.row() - 1);
+    m_layers.erase(m_layers.begin() + selected.row() - 1);
     
     /// Extract the root item
     QStandardItem* root = m_treeModel->invisibleRootItem();
@@ -363,7 +452,7 @@ void LensFlarePreviewProperties::deleteItem()
 void LensFlarePreviewProperties::clearItems()
 {
     // Extract the list of selected rows.
-    m_lightSources.clear();
+    m_layers.clear();
     
     /// Extract the root item
     QStandardItem* root = m_treeModel->invisibleRootItem();
@@ -407,7 +496,7 @@ void LensFlarePreviewProperties::createTreeAttributes()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void LensFlarePreviewProperties::createTreeItem(int lightSourceId)
+void LensFlarePreviewProperties::createTreeItem(int layerId)
 {
     /// Extract the root item
     QStandardItem* root = m_treeModel->invisibleRootItem();
@@ -417,11 +506,11 @@ void LensFlarePreviewProperties::createTreeItem(int lightSourceId)
     QStandardItem* elementHeader = new QStandardItem();
     elementEmpty->setEditable(false);
     elementHeader->setEditable(false);
-    root->insertRow(lightSourceId + 1, { elementHeader, elementEmpty });
+    root->insertRow(layerId + 1, { elementHeader, elementEmpty });
 
     // Add the attributes.
-    const auto& lightSourceAttributes = getLightSourceAttributes(lightSourceId);
-    for (auto attrib: lightSourceAttributes)
+    const auto& layerAttributes = getLayerAttributes(layerId);
+    for (auto attrib: layerAttributes)
     {
         // Create the name and value items
         QStandardItem* name = new QStandardItem();
@@ -445,7 +534,7 @@ void LensFlarePreviewProperties::createTree()
     createTreeAttributes();
 
     // Create items for the elements
-    for (size_t i = 0; i < m_lightSources.size(); ++i)
+    for (size_t i = 0; i < m_layers.size(); ++i)
     {
         createTreeItem((int) i);
     }

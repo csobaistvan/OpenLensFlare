@@ -167,14 +167,14 @@ void MainWindow::createMenu()
     generateMenu->addAction(generateBoundsAction);
     generateBoundsAction->setText("Generate Ghost Bounds");
     connect(generateBoundsAction, &QAction::triggered, 
-        this, &MainWindow::generateGhostBounds);
+        m_lensFlarePreviewer, &LensFlarePreviewer::computeGhostParameters);
 
     // Generate->generate starburst texture
     QAction* generateStarburstAction = new QAction;
     generateMenu->addAction(generateStarburstAction);
     generateStarburstAction->setText("Generate Starburst");
     connect(generateStarburstAction, &QAction::triggered, 
-        this, &MainWindow::generateStarburst);
+        m_lensFlarePreviewer, &LensFlarePreviewer::generateStarburst);
 
     // Help menu
     QMenu* helpMenu = new QMenu;
@@ -195,18 +195,18 @@ void MainWindow::setupTestScene()
     m_browseFolder = "D:/Program/Programming/Projects/Cpp/OpenLensFlare/OpenLensFlare/examples/systems";
     
     QString aperture = m_browseFolder + "/apertureDist.bmp";
-    QString apertureFT = m_browseFolder + "/apertureFTClean.bmp";
+    QString apertureFT = m_browseFolder + "/apertureFT.bmp";
     ImageLibrary* imgLibrary = m_lensFlarePreviewer->getImageLibrary();
 
     loadOpticalSystem(m_browseFolder + "/heliar-tronnier.xml");
     imgLibrary->loadImage(aperture);
     imgLibrary->loadImage(apertureFT);
-    m_opticalSystem->setFnumber(2.8f);
     (*m_opticalSystem)[5].setTexture(imgLibrary->uploadTexture(aperture));
     (*m_opticalSystem)[5].setTextureFT(imgLibrary->uploadTexture(apertureFT));
     m_opticalSystemEditor->update();
 
-    generateStarburst();
+    m_lensFlarePreviewer->generateStarburst();
+    m_lensFlarePreviewer->update();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -262,25 +262,30 @@ void MainWindow::loadGhostBounds()
     QFile fin(fileName);
     if (!fin.open(QIODevice::ReadOnly))
         return;
+
+    // Deserialize the object.
+    QMap<float, OLEF::GhostList> ghosts;
+    GhostSerializer serializer(&fin, &ghosts);
+    if (!serializer.deserialize())
+        return;
+
+    // Store the deserialized ghosts
+    m_lensFlarePreviewer->setPrecomputedGhosts(ghosts);
+
+    // Let the views know about the change.
+    m_lensFlarePreviewer->opticalSystemChanged();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void MainWindow::loadStarburst()
 {
-    // There is only one starburst algorithm right now, so this is safe
-    OLEF::DiffractionStarburstAlgorithm* starburst =
-        (OLEF::DiffractionStarburstAlgorithm*) m_lensFlarePreviewer->getStarburstAlgorithm();
-
-    // Load an image.
+    // Create a browse dialog.
     auto imagePath = m_lensFlarePreviewer->getImageLibrary()->loadImageDialog(
         this, "Load Starburst Image");
 
-    // Try to load it.
-    if (m_lensFlarePreviewer->getImageLibrary()->loadImage(imagePath))
-    {
-        starburst->setTexture(m_lensFlarePreviewer->getImageLibrary()->
-            uploadTexture(imagePath));
-    }
+    // Store it in the render object.
+    m_lensFlarePreviewer->getDiffractionStarburstAlgorithm()->setTexture(
+        m_lensFlarePreviewer->getImageLibrary()->uploadTexture(imagePath));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -304,8 +309,8 @@ void MainWindow::saveSystem()
         return;
 
     // Serialize the object.
-    OpticalSystemSerializer serializer(&fin, m_opticalSystem, 
-        m_lensFlarePreviewer->getImageLibrary());
+    OpticalSystemSerializer serializer(
+        &fin, m_opticalSystem, m_lensFlarePreviewer->getImageLibrary());
     serializer.serialize();
 }
 
@@ -329,50 +334,30 @@ void MainWindow::saveGhostBounds()
     if (!fin.open(QIODevice::WriteOnly))
         return;
 
-    // Create the xml stream.
-    QXmlStreamWriter xml;
-    xml.setDevice(&fin);
-    xml.setAutoFormatting(true);
-
-    xml.writeStartDocument();
-    xml.writeStartElement("ghostBounds");
-
-    xml.writeEndElement();
-    xml.writeEndDocument();
+    // Serialize the object.
+    auto ghosts = m_lensFlarePreviewer->getPrecomputedGhosts();
+    GhostSerializer serializer(&fin, &ghosts);
+    serializer.serialize();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void MainWindow::saveStarburst()
 {
-    // There is only one starburst algorithm right now, so this is safe
-    OLEF::DiffractionStarburstAlgorithm* starburst =
-        (OLEF::DiffractionStarburstAlgorithm*) m_lensFlarePreviewer->getStarburstAlgorithm();
+    // Load back the generated texture from the GPU into main memory.
+    m_lensFlarePreviewer->getImageLibrary()->loadImage(
+        m_lensFlarePreviewer->getDiffractionStarburstAlgorithm()->getTexture(),
+         true);
 
-    // Save the texture.
-    m_lensFlarePreviewer->getImageLibrary()->loadImage(starburst->getTexture(), 
-        true);
-    m_lensFlarePreviewer->getImageLibrary()->saveImageDialog(this, 
-        "Save Starburst Image", starburst->getTexture());
+    // Create a save image dialog and save the texture.
+    m_lensFlarePreviewer->getImageLibrary()->saveImageDialog(
+        this, "Save Starburst Image", 
+        m_lensFlarePreviewer->getDiffractionStarburstAlgorithm()->getTexture());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void MainWindow::quit()
 {
     qApp->quit();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void MainWindow::generateGhostBounds()
-{
-    OLEF::RayTraceGhostAlgorithm* ghost =
-        (OLEF::RayTraceGhostAlgorithm*) m_lensFlarePreviewer->getGhostAlgorithm();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void MainWindow::generateStarburst()
-{
-    m_lensFlarePreviewer->generateStarburst(2048, 390.0f, 780.0f, 5.0f);
-    m_lensFlarePreviewer->update();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

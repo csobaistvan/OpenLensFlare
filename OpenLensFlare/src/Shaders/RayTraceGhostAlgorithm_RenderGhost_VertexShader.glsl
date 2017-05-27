@@ -280,7 +280,7 @@ out float fIntensity;
 
 void main()
 {
-    // Subdivision, corner and step size
+    // Subdivision size, corner position and step size
     int SUBDIVISION = iRayCount - 1;
     vec2 CORNER = vec2(-1.0);
     vec2 STEP = vec2(2.0) / SUBDIVISION;
@@ -323,25 +323,19 @@ void main()
     
     // Write out the output values
     vParam = rayPos;
-    
-    //  Render mode: projected ghost
-    if (iRenderMode == 0)
-    {
-        vPos = result.pos.xy / vFilmSize;
-    }
-    
-    // Render mode: ray grid
-    else if (iRenderMode == 1)
-    {
-        vPos = rayPos;
-    }
-    
-    // Render mode: sensor grid
-    else if (iRenderMode == 2)
-    {
-        vPos = vertexPos * vImageSize + vImageCenter;
-    }
     vUv = result.uv;
     fRadius = result.radius;
     fIntensity = result.intensity;
+    
+    //  Render mode: projected ghost
+    if (iRenderMode == RENDER_MODE_PROJECTED_GHOST)
+    {
+        vPos = result.pos.xy / (vFilmSize * 0.5);
+    }
+    
+    // Render mode: pupil grid
+    else if (iRenderMode == RENDER_MODE_PUPIL_GRID)
+    {
+        vPos = rayPos;
+    }
 }

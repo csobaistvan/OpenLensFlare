@@ -25,8 +25,8 @@ private:
     /// Constructs global attributes for the previewer.
     QVector<AttributeCellWidgetBase*> getGlobalAttributes();
 
-    /// Constructs light source attributes for the previewer.
-    QVector<AttributeCellWidgetBase*> getLightSourceAttributes(int lightSourceId);
+    /// Constructs layer attributes for the previewer.
+    QVector<AttributeCellWidgetBase*> getLayerAttributes(int layerId);
 
     /// Creates the top toolbar
     void createToolBar();
@@ -39,7 +39,7 @@ private:
     void createTreeAttributes();
 
     /// Creates a tree item for the specified element.
-    void createTreeItem(int lightSourceId);
+    void createTreeItem(int layerId);
 
     /// Creates the tree structure.
     void createTree();
@@ -83,12 +83,6 @@ private:
     /// The layout holding together the items.
     QLayout* m_layout;
 
-    /// Starburst texture parameters.
-    int m_starburstTextureSize;
-    float m_starburstMinWl;
-    float m_starburstMaxWl;
-    float m_starburstWlStep;
-
     /// The light sources to render.
-    QVector<LensFlarePreviewer::LightSource> m_lightSources;
+    QVector<LensFlarePreviewer::Layer> m_layers;
 };
