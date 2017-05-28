@@ -54,6 +54,34 @@ namespace GLHelpers
         GLuint loc = glGetUniformLocation(program, name);
         glUniform4fv(loc, (GLsizei) val.size(), (GLfloat*) val.data());
     }
+    
+    template<size_t N>
+    inline void uploadUniform(GLuint program, const char* name, GLfloat (&val)[N])
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform1fv(loc, N, (GLfloat*) val);
+    }
+
+    template<size_t N>
+    inline void uploadUniform(GLuint program, const char* name, glm::vec2 (&val)[N])
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform2fv(loc, N, (GLfloat*) val);
+    }
+
+    template<size_t N>
+    inline void uploadUniform(GLuint program, const char* name, glm::vec3 (&val)[N])
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform3fv(loc, N, (GLfloat*) val);
+    }
+
+    template<size_t N>
+    inline void uploadUniform(GLuint program, const char* name, glm::vec4 (&val)[N])
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform4fv(loc, N, (GLfloat*) val);
+    }
 
     inline void uploadUniform(GLuint program, const char* name, GLint val)
     {
@@ -77,6 +105,58 @@ namespace GLHelpers
     {
         GLuint loc = glGetUniformLocation(program, name);
         glUniform4i(loc, val.x, val.y, val.z, val.w);
+    }
+    
+    inline void uploadUniform(GLuint program, const char* name, const std::vector<GLint>& val)
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform1iv(loc, (GLsizei) val.size(), val.data());
+    }
+
+    inline void uploadUniform(GLuint program, const char* name, const std::vector<glm::ivec2>& val)
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform2iv(loc, (GLsizei) val.size(), (GLint*) val.data());
+    }
+
+    inline void uploadUniform(GLuint program, const char* name, const std::vector<glm::ivec3>& val)
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform3iv(loc, (GLsizei) val.size(), (GLint*) val.data());
+    }
+
+    inline void uploadUniform(GLuint program, const char* name, const std::vector<glm::ivec4>& val)
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform4iv(loc, (GLsizei) val.size(), (GLint*) val.data());
+    }
+    
+    template<size_t N>
+    inline void uploadUniform(GLuint program, const char* name, GLint (&val)[N])
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform1iv(loc, N, (GLint*) val);
+    }
+
+    template<size_t N>
+    inline void uploadUniform(GLuint program, const char* name, glm::ivec2 (&val)[N])
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform2iv(loc, N, (GLint*) val);
+    }
+
+    template<size_t N>
+    inline void uploadUniform(GLuint program, const char* name, glm::ivec3 (&val)[N])
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform3iv(loc, N, (GLint*) val);
+    }
+
+    template<size_t N>
+    inline void uploadUniform(GLuint program, const char* name, glm::ivec4 (&val)[N])
+    {
+        GLuint loc = glGetUniformLocation(program, name);
+        glUniform4iv(loc, N, (GLint*) val);
     }
 
     inline void uploadUniform(GLuint program, const char* name, const glm::mat2& val)

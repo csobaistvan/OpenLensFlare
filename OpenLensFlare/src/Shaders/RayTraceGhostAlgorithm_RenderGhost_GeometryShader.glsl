@@ -56,7 +56,7 @@ void main()
         
         #ifdef PRECOMPUTATION
         vec2 normalizedUv = clamp(vUv[i], vec2(-1.0), vec2(1.0)) * 0.5 + 0.5;
-        fIrisDistance = texture(sAperture, normalizedUv).r;
+        fIrisDistanceGS = texture(sAperture, normalizedUv).r;
         vPositionGS = vPos[i];
         #endif
 

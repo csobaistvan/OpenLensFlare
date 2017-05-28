@@ -196,7 +196,7 @@ Ray traceRay(Ray ray)
         Lens lens = createLens(t);
     
         // Change direction upon reaching the designated interfaces
-        bool reflectRay = phase < 2 && t == vGhostIndices[phase];
+        bool reflectRay = phase < iNumIndices && t == iGhostIndices[phase];
         if (reflectRay)
         {
             delta = -delta;

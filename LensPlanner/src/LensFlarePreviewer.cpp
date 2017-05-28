@@ -18,7 +18,9 @@ LensFlarePreviewer::LensFlarePreviewer(OLEF::OpticalSystem* system, QWidget* par
     m_starburstMinWavelength(390.0f),
     m_starburstMaxWavelength(780.0f),
     m_starburstWavelengthStep(5.0f),
-    m_rayTraceGhostAlgorithm(nullptr)
+    m_rayTraceGhostAlgorithm(nullptr),
+    m_precompute(false),
+    m_generateStarburst(false)
 {
     // Initialize the GL format
     QSurfaceFormat fmt;
@@ -108,9 +110,9 @@ void LensFlarePreviewer::computeGhostParameters()
         // Construct the parameter object
         OLEF::RayTraceGhostAlgorithm::GhostAttribComputeParams computeParams;
 
-        computeParams.m_angle = angle;
+        computeParams.m_angle = glm::radians(angle);
         computeParams.m_boundingPasses = 3;
-        computeParams.m_boundingRays = { 33, 33, 33};
+        computeParams.m_boundingRays = { 32, 32, 32 };
         computeParams.m_rayPresets = { 5, 16, 32, 64, 128 };
 
         // Compute the ghost attributes
@@ -134,22 +136,22 @@ void LensFlarePreviewer::computeGhostParameters()
         auto mergedGhosts = currentGhosts;
 
         // Process each ghost on the list
-        for (size_t i = 0; i < mergedGhosts.size(); ++i)
+        for (size_t ghostId = 0; ghostId < mergedGhosts.size(); ++ghostId)
         {
             // Extract the previous, current and next pupil bounds
             OLEF::Ghost::BoundingRect rawPupilBounds[3] =
             {
-                prevGhosts[i].getPupilBounds(),
-                currentGhosts[i].getPupilBounds(),
-                nextGhosts[i].getPupilBounds(),
+                prevGhosts[ghostId].getPupilBounds(),
+                currentGhosts[ghostId].getPupilBounds(),
+                nextGhosts[ghostId].getPupilBounds(),
             };
             
             // Extract the previous, current and next sensor bounds
             OLEF::Ghost::BoundingRect rawSensorBounds[3] =
             {
-                prevGhosts[i].getSensorBounds(),
-                currentGhosts[i].getSensorBounds(),
-                nextGhosts[i].getSensorBounds(),
+                prevGhosts[ghostId].getSensorBounds(),
+                currentGhosts[ghostId].getSensorBounds(),
+                nextGhosts[ghostId].getSensorBounds(),
             };
 
             // Output pupil and sensor values
@@ -157,33 +159,30 @@ void LensFlarePreviewer::computeGhostParameters()
             OLEF::Ghost::BoundingRect outSensorBounds;
 
             // Process the X/W and Y/H channels of both bounds
-            for (int i = 0; i < 2; ++i)
-            {
-                outPupilBounds[0][i] = glm::min(
-                    rawPupilBounds[0][0][i], glm::min(
-                    rawPupilBounds[1][0][i],
-                    rawPupilBounds[2][0][i]
-                    ));
-                outPupilBounds[1][i] = glm::max(
-                    rawPupilBounds[0][1][i], glm::max(
-                    rawPupilBounds[1][1][i],
-                    rawPupilBounds[2][1][i]
-                    ));
-                outSensorBounds[0][i] = glm::min(
-                    rawSensorBounds[0][0][i], glm::min(
-                    rawSensorBounds[1][0][i],
-                    rawSensorBounds[2][0][i]
-                    ));
-                outSensorBounds[1][i] = glm::max(
-                    rawSensorBounds[0][1][i], glm::max(
-                    rawSensorBounds[1][1][i],
-                    rawSensorBounds[2][1][i]
-                    ));
-            }
+            outPupilBounds[0] = glm::min(
+                rawPupilBounds[0][0], glm::min(
+                rawPupilBounds[1][0],
+                rawPupilBounds[2][0]
+                ));
+            outPupilBounds[1] = glm::max(
+                rawPupilBounds[0][1], glm::max(
+                rawPupilBounds[1][1],
+                rawPupilBounds[2][1]
+                ));
+            outSensorBounds[0] = glm::min(
+                rawSensorBounds[0][0], glm::min(
+                rawSensorBounds[1][0],
+                rawSensorBounds[2][0]
+                ));
+            outSensorBounds[1] = glm::max(
+                rawSensorBounds[0][1], glm::max(
+                rawSensorBounds[1][1],
+                rawSensorBounds[2][1]
+                ));
 
             // Store the computed values
-            mergedGhosts[i].setPupilBounds(outPupilBounds);
-            mergedGhosts[i].setPupilBounds(outSensorBounds);
+            mergedGhosts[ghostId].setPupilBounds(outPupilBounds);
+            mergedGhosts[ghostId].setSensorBounds(outSensorBounds);
         }
 
         // Store the merged ghost list
@@ -319,6 +318,20 @@ void LensFlarePreviewer::paintGL()
     // Also call glew init
     glewInit();
 
+    // Compute ghost bounds, if needed.
+    if (m_precompute)
+    {
+        computeGhostParameters();
+        m_precompute = false;
+    }
+
+    // Generate the starburst texture, if needed.
+    if (m_generateStarburst)
+    {
+        generateStarburst();
+        m_generateStarburst = false;
+    }
+
     // Clear the background
     f->glClearColor(m_backgroundColor.redF(), m_backgroundColor.greenF(), 
         m_backgroundColor.blueF(), m_backgroundColor.alphaF());
@@ -327,6 +340,12 @@ void LensFlarePreviewer::paintGL()
     // Render the starburst
     for (auto layer: m_layers)
     {
+        // Turn on wireframe rendering, if requested.
+        if (layer.m_wireframe)
+        {
+		    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
+
         // Construct the corresponding light source object
         OLEF::LightSource lightSource;
 
@@ -352,9 +371,9 @@ void LensFlarePreviewer::paintGL()
         // Re-use the precomputed values if we can
         if (layer.m_useGhostAttributes)
         {
-            float angle = glm::acos(glm::dot(
+            float angle = glm::degrees(glm::acos(glm::dot(
                 -lightSource.getIncidenceDirection(), 
-                glm::vec3(0.0f, 0.0f, -1.0f)));
+                glm::vec3(0.0f, 0.0f, -1.0f))));
 
             auto it = m_precomputedGhosts.lowerBound(angle);
             if (it != m_precomputedGhosts.end())
@@ -383,5 +402,11 @@ void LensFlarePreviewer::paintGL()
 
         // Render the generated ghosts
         m_rayTraceGhostAlgorithm->renderGhosts(lightSource, ghosts);
+        
+        // Disable wireframe rendering
+        if (layer.m_wireframe)
+        {
+	        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
     }
 }

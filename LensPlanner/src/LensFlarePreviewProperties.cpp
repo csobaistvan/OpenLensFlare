@@ -201,6 +201,12 @@ QVector<AttributeCellWidgetBase*> LensFlarePreviewProperties::getLayerAttributes
             "",
             &m_layers[layerId].m_useGhostAttributes,
         },
+        new AttributeCellBool
+        {
+            "Render Wireframe",
+            "",
+            &m_layers[layerId].m_wireframe,
+        },
     };
 }
 

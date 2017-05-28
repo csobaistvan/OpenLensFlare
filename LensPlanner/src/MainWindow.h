@@ -39,6 +39,10 @@ private:
     void saveStarburst();
     void quit();
 
+    /// Generate menu callbacks
+    void generateStarburst();
+    void generateBounds();
+
     /// Help menu callbacks
     void about();
 

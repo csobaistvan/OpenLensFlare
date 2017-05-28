@@ -75,9 +75,12 @@ public:
         /// The total number of bounding passes to take per ghost.
         int m_boundingPasses = 2;
 
+        /// Wavelengths used during precomputations
+        std::vector<float> m_lambdas = { 650.0f, 510.0f, 475.0f };
+
         /// The number of rays to use in each bounding step. The last element
         /// is used if the number of passes exceeds the vector size.
-        std::vector<int> m_boundingRays = { 33, 33 };
+        std::vector<int> m_boundingRays = { 32, 32 };
 
         /// The list of ray grid sizes to choose from.
         std::vector<int> m_rayPresets = { 5, 16, 32, 64, 128 };
@@ -147,8 +150,14 @@ private:
         /// The ghost to render.
         Ghost m_ghost;
 
+        /// The shader to render with.
+        GLuint m_shader;
+
         /// Mask texture.
         GLuint m_mask;
+
+        /// A fixed ray grid size to use, mainly for precomputation purposes.
+        int m_fixedRayCount;
 
         /// Wavelength to render at.
         float m_lambda;
@@ -167,6 +176,31 @@ private:
 
         /// Distance clipping.
         float m_distanceClip;
+
+        /// Intensity clipping.
+        float m_intensityClip;
+    };
+
+    /// Per-vertex data, read back through transform feedback.
+    struct PerVertexData
+    {
+        /// Position of the ray on the pupil.
+        glm::vec2 m_parameter;
+
+        /// Position of the ray's projection on the sensor.
+        glm::vec2 m_position;
+
+        /// UV coordinates of the ray's hit on the iris.
+        glm::vec2 m_uv;
+
+        /// Distance of the trace hit from the optical axis.
+        GLfloat m_radius;
+
+        /// Transmitted light intensity of the ghost.
+        GLfloat m_intensity;
+
+        /// Distance of the ray to the center of the iris.
+        GLfloat m_irisDistance;
     };
 
     /// Renders a specific channel of a ghost. It uses a parameter structure

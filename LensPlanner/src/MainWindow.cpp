@@ -167,14 +167,14 @@ void MainWindow::createMenu()
     generateMenu->addAction(generateBoundsAction);
     generateBoundsAction->setText("Generate Ghost Bounds");
     connect(generateBoundsAction, &QAction::triggered, 
-        m_lensFlarePreviewer, &LensFlarePreviewer::computeGhostParameters);
+        this, &MainWindow::generateBounds);
 
     // Generate->generate starburst texture
     QAction* generateStarburstAction = new QAction;
     generateMenu->addAction(generateStarburstAction);
     generateStarburstAction->setText("Generate Starburst");
     connect(generateStarburstAction, &QAction::triggered, 
-        m_lensFlarePreviewer, &LensFlarePreviewer::generateStarburst);
+        this, &MainWindow::generateStarburst);
 
     // Help menu
     QMenu* helpMenu = new QMenu;
@@ -205,7 +205,7 @@ void MainWindow::setupTestScene()
     (*m_opticalSystem)[5].setTextureFT(imgLibrary->uploadTexture(apertureFT));
     m_opticalSystemEditor->update();
 
-    m_lensFlarePreviewer->generateStarburst();
+    m_lensFlarePreviewer->requestStarburstGeneration();
     m_lensFlarePreviewer->update();
 }
 
@@ -363,3 +363,17 @@ void MainWindow::quit()
 ////////////////////////////////////////////////////////////////////////////////
 void MainWindow::about()
 {}
+
+////////////////////////////////////////////////////////////////////////////////
+void MainWindow::generateStarburst()
+{
+    m_lensFlarePreviewer->requestStarburstGeneration();
+    m_lensFlarePreviewer->update();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MainWindow::generateBounds()
+{
+    m_lensFlarePreviewer->requestPrecomputation();
+    m_lensFlarePreviewer->update();
+}

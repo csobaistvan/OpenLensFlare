@@ -7,7 +7,8 @@ uniform float fLensAperture[64];
 uniform float fLensCoating[64];
 
 // Uniforms
-uniform ivec2 vGhostIndices;
+uniform int iGhostIndices[16];
+uniform int iNumIndices;
 uniform int iLength;
 uniform int iRayCount;
 uniform vec2 vGridCenter;

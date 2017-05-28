@@ -124,27 +124,6 @@ RayTraceGhostAlgorithm::~RayTraceGhostAlgorithm()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-struct PerVertexData
-{
-	// Position of the ray on the pupil.
-	glm::vec2 m_parameter;
-
-	// Position of the ray's projection on the sensor.
-	glm::vec2 m_position;
-
-	// UV coordinates of the ray's hit on the iris.
-	glm::vec2 m_uv;
-
-	// Distance of the trace hit from the optical axis.
-	GLfloat m_radius;
-
-	// Transmitted light intensity of the ghost.
-	GLfloat m_intensity;
-
-	// Distance of the ray to the center of the iris.
-	GLfloat m_irisDistance;
-};
-
 GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 	const GhostList& ghosts, const GhostAttribComputeParams& computeParams)
 {
@@ -172,6 +151,7 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 	parameters.m_lightSource.setDiffuseIntensity(1.0f);
 
 	parameters.m_mask = apertureTexture;
+	parameters.m_shader = m_precomputeShader;
 	parameters.m_intensityScale = 1.0f;
 	parameters.m_renderMode = RenderMode::PROJECTED_GHOST;
 	parameters.m_shadingMode = ShadingMode::SHADED;
@@ -182,44 +162,173 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 	int maxRays = *std::max_element(
 		computeParams.m_boundingRays.begin(), computeParams.m_boundingRays.end());
 
-	// Create and initialize the read-back buffer// Compute the required buffer sizes
+	// Compute the maximum buffer size needed, and per-ghost byte offsets into
+	// the buffer
+	std::vector<std::array<int, 2>> byteOffsets(ghosts.size());
+	std::vector<std::array<int, 2>> vertexOffsets(ghosts.size());
+	GLint vertexSize = 0;
+	GLint bufferSize = 0;
+	
+	for (size_t i = 0; i < ghosts.size(); ++i)
+	{
+		// Per-channel vertices and bytes needed
+		int vertices = (maxRays - 1) * (maxRays - 1) * 6;
+		int bytes = vertices * sizeof(PerVertexData);
+
+		// Total vertices and bytes per ghost
+		int totalVerts = vertices * (int) computeParams.m_lambdas.size();
+		int totalBytes = bytes * (int) computeParams.m_lambdas.size();
+
+		// Per-channel offsets and sizes
+		vertexOffsets[i] = { vertexSize, vertices };
+		byteOffsets[i] = { bufferSize, bytes };
+
+		// Total number of vertices and bytes needed
+		vertexSize += totalVerts;
+		bufferSize += totalBytes;
+	}
+
+	// Create and initialize the read-back buffer
 	GLuint readBackBuffer;
 	glGenBuffers(1, &readBackBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, readBackBuffer);
-	glBufferData(GL_ARRAY_BUFFER, /*TODO: compute this*/0, nullptr, GL_STATIC_READ);
+	glBufferData(GL_ARRAY_BUFFER, bufferSize, nullptr, GL_STATIC_READ);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
 	// Bind the precomputation shader
 	glUseProgram(m_precomputeShader);
+    glBindVertexArray(m_vao);
 
 	// Disable rasterization
 	glEnable(GL_RASTERIZER_DISCARD);
 
-	// Render the selected ghosts
-    glBindVertexArray(m_vao);
-	for (int chId = 0; chId < STANDARD_WAVELENGTHS.size(); ++chId)
+	// Compute bounding geometry
+	for (int passId = 0; passId < computeParams.m_boundingPasses; ++passId)
 	{
-		parameters.m_lambda = STANDARD_WAVELENGTHS[chId];
-		for (const auto& ghost: ghosts)
+		// Extract the current grid size
+		int numRays = computeParams.m_boundingRays[std::min(
+			computeParams.m_boundingRays.size() - 1, (size_t) passId)];
+		int numVertices = (numRays - 1) * (numRays - 1) * 6;
+
+		// Set it as the fixed ray grid size
+		parameters.m_fixedRayCount = numRays;
+
+		// Process each ghost
+		for (int ghostId = 0; ghostId < ghosts.size(); ++ghostId)
 		{
-			if (m_opticalSystem->isValidGhost(ghost))
+			if (m_opticalSystem->isValidGhost(result[ghostId]))
 			{
-				parameters.m_ghost = ghost;
-				//glBindBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER, 0, readBackBuffer, byteOffsets[i][0] + ch * byteOffsets[i][1], byteOffsets[i][1]);
-				glBeginTransformFeedback(GL_TRIANGLES);
-				//renderGhostChannel(parameters);
-				glEndTransformFeedback();
+				// Set the ghost we are rendering
+				parameters.m_ghost = result[ghostId];
+
+				// Process each channel
+				for (int chId = 0; chId < computeParams.m_lambdas.size(); ++chId)
+				{
+					// Set the current wavelength
+					parameters.m_lambda = computeParams.m_lambdas[chId];
+
+					// Extract the corresponding byte offset and byte size
+					auto byteOffset = byteOffsets[ghostId][0];
+					auto byteSize = byteOffsets[ghostId][1];
+
+					// Bind the transform feedback buffer
+					glBindBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 
+						readBackBuffer, byteOffset + chId * byteSize, byteSize);
+
+					// Start the transform feedback
+					glBeginTransformFeedback(GL_TRIANGLES);
+
+					// Render the ghost
+					renderGhostChannel(parameters);
+
+					// End the transform feedback
+					glEndTransformFeedback();
+				}
 			}
 		}
+		
+		// Read back the values
+		glMemoryBarrier(GL_TRANSFORM_FEEDBACK_BARRIER_BIT);
+		glBindBuffer(GL_ARRAY_BUFFER, readBackBuffer);
+		PerVertexData* vertices = 
+			(PerVertexData*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_ONLY);
+
+		// Process the generated ray data to find the bounds
+		for (int ghostId = 0; ghostId < ghosts.size(); ++ghostId)
+		{
+			// Culling constants
+			//
+			// TODO: consider making these computation parameters
+			static const float RADIUS_CULL = 1.0001f;
+			static const float INTENSITY_CULL = 0.00025f;
+			static const float DISTANCE_CULL = 0.951f;
+
+			// Output bounding information - note that this is temporarily stored
+			// in a min-max corner format, instead of corner-size, to help
+			// with the computations
+			Ghost::BoundingRect pupilBounds = { glm::vec2(1.0f), glm::vec2(-1.0f) };
+			Ghost::BoundingRect sensorBounds = { glm::vec2(1.0f), glm::vec2(-1.0f) };
+
+			// Go through each channel
+			for (int channelId = 0; channelId < computeParams.m_lambdas.size(); ++channelId)
+			{
+				// Process each triangle
+				for (int triangleId = 0; triangleId < numVertices / 3; ++triangleId)
+				{
+					// Index of the first vertex
+					int baseVertexId = vertexOffsets[ghostId][0] + 
+						channelId * vertexOffsets[ghostId][1] + triangleId * 3;
+
+					// Keep the full triangle if any of its vertices are 'valid'
+					bool keep = false;
+					for (int vertexId = 0; vertexId < 3; ++vertexId)
+					{
+						// Extract the current vertex
+						int actualVertexId = baseVertexId + vertexId;
+						const auto& vertex = vertices[actualVertexId];
+
+						keep = keep || (
+							vertex.m_radius <= RADIUS_CULL && 
+							vertex.m_intensity >= INTENSITY_CULL && 
+							vertex.m_irisDistance <= DISTANCE_CULL);
+					}
+
+					// Skip the full triangle if all of its vertices are invalid
+					if (!keep)
+						continue;
+
+					// Update the bounds using all 3 vertices
+					for (int vertexId = 0; vertexId < 3; ++vertexId)
+					{
+						// Extract the current vertex
+						int actualVertexId = baseVertexId + vertexId;
+						const auto& vertex = vertices[actualVertexId];
+
+						pupilBounds[0] = glm::min(pupilBounds[0], vertex.m_parameter);
+						pupilBounds[1] = glm::max(pupilBounds[1], vertex.m_parameter);
+
+						sensorBounds[0] = glm::min(sensorBounds[0], vertex.m_position);
+						sensorBounds[1] = glm::max(sensorBounds[1], vertex.m_position);
+					}
+				}
+			}
+
+			// Store the bounds
+			pupilBounds[1] = pupilBounds[1] - pupilBounds[0];
+			sensorBounds[1] = sensorBounds[1] - sensorBounds[0];
+
+			result[ghostId].setPupilBounds(pupilBounds);
+			result[ghostId].setSensorBounds(sensorBounds);
+		}
+
+		// Unmap the buffer
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
-    glBindVertexArray(0);
 
 	// Re-enable rasterization
 	glDisable(GL_RASTERIZER_DISCARD);
-
-	// Read back the values
-
-	// Process the generated ray data
+    glBindVertexArray(0);
 
 	// Release the vertex buffer
 	glDeleteBuffers(1, &readBackBuffer);
@@ -248,7 +357,7 @@ void RayTraceGhostAlgorithm::renderGhostChannel(const RenderParameters& paramete
     // Bind the aperture texture
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, parameters.m_mask);
-	GLHelpers::uploadUniform(m_renderShader, "sAperture", 0);
+	GLHelpers::uploadUniform(parameters.m_shader, "sAperture", 0);
 
 	// Temporary vectors for the lens parameters
 	auto elementCount = m_opticalSystem->getElementCount() + 1;
@@ -307,15 +416,22 @@ void RayTraceGhostAlgorithm::renderGhostChannel(const RenderParameters& paramete
 
 	// Ghost interface indices (increment by one because of the empty
 	// space before the front element)
-	glm::ivec2 ghostIndices = glm::ivec2(
-		parameters.m_ghost[0] + 1, 
-		parameters.m_ghost[1] + 1);
+	GLint ghostIndices[16];
+	for (int i = 0; i < parameters.m_ghost.getLength(); ++i)
+	{
+		ghostIndices[i] = parameters.m_ghost[i] + 1;
+	}
+
+	// Number of interfaces (including air before)
+	GLint numIndices = (GLint) parameters.m_ghost.getLength();
 	
 	// Number of interfaces (including air before)
 	GLint elementLength = (GLint) elementCount;
 	
 	// Ray grid dimensions
-	GLint rayCount = parameters.m_ghost.getMinimumRays();
+	GLint rayCount = parameters.m_fixedRayCount != 0 ? 
+		parameters.m_fixedRayCount :
+		parameters.m_ghost.getMinimumRays();
 	
 	// Direction of the ray
 	glm::vec3 rayDir = glm::vec3(rotMat * glm::vec4(baseDir, 1.0f));
@@ -366,30 +482,31 @@ void RayTraceGhostAlgorithm::renderGhostChannel(const RenderParameters& paramete
 	GLfloat irisClip = parameters.m_distanceClip;
 
 	// Upload all the uniforms
-	GLHelpers::uploadUniform(m_renderShader, "vLensCenter", centers);
-	GLHelpers::uploadUniform(m_renderShader, "vLensIor", refractions);
-	GLHelpers::uploadUniform(m_renderShader, "fLensRadius", curvatures);
-	GLHelpers::uploadUniform(m_renderShader, "fLensHeight", heights);
-	GLHelpers::uploadUniform(m_renderShader, "fLensAperture", apertures);
-	GLHelpers::uploadUniform(m_renderShader, "fLensCoating", thicknesses);
+	GLHelpers::uploadUniform(parameters.m_shader, "vLensCenter", centers);
+	GLHelpers::uploadUniform(parameters.m_shader, "vLensIor", refractions);
+	GLHelpers::uploadUniform(parameters.m_shader, "fLensRadius", curvatures);
+	GLHelpers::uploadUniform(parameters.m_shader, "fLensHeight", heights);
+	GLHelpers::uploadUniform(parameters.m_shader, "fLensAperture", apertures);
+	GLHelpers::uploadUniform(parameters.m_shader, "fLensCoating", thicknesses);
 
-	GLHelpers::uploadUniform(m_renderShader, "vGhostIndices", ghostIndices);
-	GLHelpers::uploadUniform(m_renderShader, "iLength", elementLength);
-	GLHelpers::uploadUniform(m_renderShader, "iRayCount", rayCount);
-	GLHelpers::uploadUniform(m_renderShader, "vRayDir", rayDir);
-	GLHelpers::uploadUniform(m_renderShader, "vGridCenter", gridCenter);
-	GLHelpers::uploadUniform(m_renderShader, "vGridSize", gridSize);
-	GLHelpers::uploadUniform(m_renderShader, "vImageCenter", imageCenter);
-	GLHelpers::uploadUniform(m_renderShader, "vImageSize", imageSize);
-	GLHelpers::uploadUniform(m_renderShader, "fRayDistance", rayDist);
-	GLHelpers::uploadUniform(m_renderShader, "vFilmSize", filmSize);
-	GLHelpers::uploadUniform(m_renderShader, "fLambda", lambda);
-	GLHelpers::uploadUniform(m_renderShader, "fIntensityScale", intensity);
-	GLHelpers::uploadUniform(m_renderShader, "vColor", color);
-	GLHelpers::uploadUniform(m_renderShader, "iRenderMode", renderMode);
-	GLHelpers::uploadUniform(m_renderShader, "iShadingMode", shadingMode);
-	GLHelpers::uploadUniform(m_renderShader, "fRadiusClip", radiusClip);
-	GLHelpers::uploadUniform(m_renderShader, "fIrisClip", irisClip);
+	GLHelpers::uploadUniform(parameters.m_shader, "iGhostIndices", ghostIndices);
+	GLHelpers::uploadUniform(parameters.m_shader, "iNumIndices", numIndices);
+	GLHelpers::uploadUniform(parameters.m_shader, "iLength", elementLength);
+	GLHelpers::uploadUniform(parameters.m_shader, "iRayCount", rayCount);
+	GLHelpers::uploadUniform(parameters.m_shader, "vRayDir", rayDir);
+	GLHelpers::uploadUniform(parameters.m_shader, "vGridCenter", gridCenter);
+	GLHelpers::uploadUniform(parameters.m_shader, "vGridSize", gridSize);
+	GLHelpers::uploadUniform(parameters.m_shader, "vImageCenter", imageCenter);
+	GLHelpers::uploadUniform(parameters.m_shader, "vImageSize", imageSize);
+	GLHelpers::uploadUniform(parameters.m_shader, "fRayDistance", rayDist);
+	GLHelpers::uploadUniform(parameters.m_shader, "vFilmSize", filmSize);
+	GLHelpers::uploadUniform(parameters.m_shader, "fLambda", lambda);
+	GLHelpers::uploadUniform(parameters.m_shader, "fIntensityScale", intensity);
+	GLHelpers::uploadUniform(parameters.m_shader, "vColor", color);
+	GLHelpers::uploadUniform(parameters.m_shader, "iRenderMode", renderMode);
+	GLHelpers::uploadUniform(parameters.m_shader, "iShadingMode", shadingMode);
+	GLHelpers::uploadUniform(parameters.m_shader, "fRadiusClip", radiusClip);
+	GLHelpers::uploadUniform(parameters.m_shader, "fIrisClip", irisClip);
 
 	// Render the tessellated quad
 	int vertexCount = (rayCount - 1) * (rayCount - 1) * 6;
@@ -415,6 +532,8 @@ void RayTraceGhostAlgorithm::renderGhosts(const LightSource& light, const GhostL
 
 	parameters.m_lightSource = light;
 	parameters.m_mask = apertureTexture;
+	parameters.m_shader = m_renderShader;
+	parameters.m_fixedRayCount = 0;
 	parameters.m_intensityScale = m_intensityScale;
 	parameters.m_renderMode = m_renderMode;
 	parameters.m_shadingMode = m_shadingMode;

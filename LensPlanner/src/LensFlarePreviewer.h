@@ -12,12 +12,6 @@ public:
     explicit LensFlarePreviewer(OLEF::OpticalSystem* system, QWidget* parent = nullptr);
     ~LensFlarePreviewer();
 
-    /// Generates the diffraction starbust texture.
-    void generateStarburst();
-
-    /// Computes parameters for the rendered ghosts.
-    void computeGhostParameters();
-
     // Getters for the underlying objects.
     ImageLibrary* getImageLibrary() const 
     { return m_imageLibrary; }
@@ -75,6 +69,9 @@ public:
 
         /// Whether precomputed ghost attributes should be used (when available) or not.
         bool m_useGhostAttributes = true;
+
+        /// Whether we should draw wireframes or not.
+        bool m_wireframe = false;
     };
 
     // Getters and setters for the visualization attributes
@@ -91,6 +88,8 @@ public:
     void setStarburstWavelengthStep(float value) { m_starburstWavelengthStep = value; }
     void setLayers(const QVector<Layer>& value) { m_layers = value; }
     void setPrecomputedGhosts(const QMap<float, OLEF::GhostList>& value) {m_precomputedGhosts = value; };
+    void requestPrecomputation() { m_precompute = true; }
+    void requestStarburstGeneration() { m_generateStarburst = true; }
 
     /// TextureAccessor interface
     GLuint uploadTexture(const QImage& image);
@@ -110,11 +109,23 @@ public slots:
     void opticalSystemChanged();
 
 private:
+    /// Generates the diffraction starbust texture.
+    void generateStarburst();
+
+    /// Computes parameters for the rendered ghosts.
+    void computeGhostParameters();
+    
     /// The optical system to use with the algorithms.
     OLEF::OpticalSystem* m_opticalSystem;
 
     /// The image library that manages our textures.
     ImageLibrary* m_imageLibrary;
+
+    /// Whether we need to re-generate the starburst texture or not.
+    bool m_generateStarburst;
+
+    /// Whether we need to do pre-computation or not.
+    bool m_precompute;
 
     /// Color of the background.
     QColor m_backgroundColor;
