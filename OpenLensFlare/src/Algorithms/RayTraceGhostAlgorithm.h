@@ -84,6 +84,18 @@ public:
 
         /// The list of ray grid sizes to choose from.
         std::vector<int> m_rayPresets = { 5, 16, 32, 64, 128 };
+
+        /// Radius clipping used for the vertices.
+        float m_radiusClip = 1.0001f;
+
+        /// Distance clipping of the vertices.
+        float m_distanceClip = 0.95001f;
+
+        /// Intensity clipping for the vertices.
+        float m_intensityClip = 0.00025f;
+
+        /// The maximum variance across ghost triangles to accept a preset.
+        float m_targetVariance;
     };
 
     /// Computes the ghost rendering attributes corresponding to the provided
@@ -176,9 +188,6 @@ private:
 
         /// Distance clipping.
         float m_distanceClip;
-
-        /// Intensity clipping.
-        float m_intensityClip;
     };
 
     /// Per-vertex data, read back through transform feedback.

@@ -159,8 +159,11 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 	parameters.m_distanceClip = 100000.0f;
 	
 	// Highest ray grid size that is used while bounding
-	int maxRays = *std::max_element(
+	int maxRaysBounds = *std::max_element(
 		computeParams.m_boundingRays.begin(), computeParams.m_boundingRays.end());
+	int maxRaysPresets = *std::max_element(
+		computeParams.m_rayPresets.begin(), computeParams.m_rayPresets.end());
+	int maxRays = std::max(maxRaysBounds, maxRaysPresets);
 
 	// Compute the maximum buffer size needed, and per-ghost byte offsets into
 	// the buffer
@@ -256,13 +259,6 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 		// Process the generated ray data to find the bounds
 		for (int ghostId = 0; ghostId < ghosts.size(); ++ghostId)
 		{
-			// Culling constants
-			//
-			// TODO: consider making these computation parameters
-			static const float RADIUS_CULL = 1.0001f;
-			static const float INTENSITY_CULL = 0.00025f;
-			static const float DISTANCE_CULL = 0.951f;
-
 			// Output bounding information - note that this is temporarily stored
 			// in a min-max corner format, instead of corner-size, to help
 			// with the computations
@@ -288,9 +284,9 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 						const auto& vertex = vertices[actualVertexId];
 
 						keep = keep || (
-							vertex.m_radius <= RADIUS_CULL && 
-							vertex.m_intensity >= INTENSITY_CULL && 
-							vertex.m_irisDistance <= DISTANCE_CULL);
+							vertex.m_radius <= computeParams.m_radiusClip && 
+							vertex.m_intensity >= computeParams.m_intensityClip && 
+							vertex.m_irisDistance <= computeParams.m_distanceClip);
 					}
 
 					// Skip the full triangle if all of its vertices are invalid
@@ -319,6 +315,67 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 
 			result[ghostId].setPupilBounds(pupilBounds);
 			result[ghostId].setSensorBounds(sensorBounds);
+		}
+
+		// Unmap the buffer
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+
+	// Compute bounding geometry
+	for (int passId = 0; passId < computeParams.m_rayPresets.size(); ++passId)
+	{
+		// Extract the current grid size
+		int numRays = computeParams.m_rayPresets[passId];
+		int numVertices = (numRays - 1) * (numRays - 1) * 6;
+
+		// Set it as the fixed ray grid size
+		parameters.m_fixedRayCount = numRays;
+
+		// Process each ghost
+		for (int ghostId = 0; ghostId < ghosts.size(); ++ghostId)
+		{
+			if (m_opticalSystem->isValidGhost(result[ghostId]))
+			{
+				// Set the ghost we are rendering
+				parameters.m_ghost = result[ghostId];
+
+				// Process each channel
+				for (int chId = 0; chId < computeParams.m_lambdas.size(); ++chId)
+				{
+					// Set the current wavelength
+					parameters.m_lambda = computeParams.m_lambdas[chId];
+
+					// Extract the corresponding byte offset and byte size
+					auto byteOffset = byteOffsets[ghostId][0];
+					auto byteSize = byteOffsets[ghostId][1];
+
+					// Bind the transform feedback buffer
+					glBindBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 
+						readBackBuffer, byteOffset + chId * byteSize, byteSize);
+
+					// Start the transform feedback
+					glBeginTransformFeedback(GL_TRIANGLES);
+
+					// Render the ghost
+					renderGhostChannel(parameters);
+
+					// End the transform feedback
+					glEndTransformFeedback();
+				}
+			}
+		}
+		
+		// Read back the values
+		glMemoryBarrier(GL_TRANSFORM_FEEDBACK_BARRIER_BIT);
+		glBindBuffer(GL_ARRAY_BUFFER, readBackBuffer);
+		PerVertexData* vertices = 
+			(PerVertexData*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_ONLY);
+
+		// Process the generated ray data to find the rest of the attributes
+		for (int ghostId = 0; ghostId < ghosts.size(); ++ghostId)
+		{
+			
 		}
 
 		// Unmap the buffer
