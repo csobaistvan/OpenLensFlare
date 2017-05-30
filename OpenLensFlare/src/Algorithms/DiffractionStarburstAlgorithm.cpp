@@ -1,7 +1,6 @@
 #include "DiffractionStarburstAlgorithm.h"
 #include "GLHelpers.h"
 
-#include "Common_Version.glsl.h"
 #include "Common_Functions.glsl.h"
 #include "Common_ColorSpace.glsl.h"
 #include "DiffractionStarburstAlgorithm_Generate_VertexShader.glsl.h"

@@ -1,10 +1,12 @@
 // Lens uniforms
-uniform vec3 vLensCenter[64];
-uniform vec3 vLensIor[64];
-uniform float fLensRadius[64];
-uniform float fLensHeight[64];
-uniform float fLensAperture[64];
-uniform float fLensCoating[64];
+#define MAX_ELEMENTS 64
+
+uniform vec3 vLensCenter[MAX_ELEMENTS];
+uniform vec3 vLensIor[MAX_ELEMENTS];
+uniform float fLensRadius[MAX_ELEMENTS];
+uniform float fLensHeight[MAX_ELEMENTS];
+uniform float fLensAperture[MAX_ELEMENTS];
+uniform float fLensCoating[MAX_ELEMENTS];
 
 // Uniforms
 uniform int iGhostIndices[16];

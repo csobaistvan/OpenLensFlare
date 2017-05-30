@@ -111,9 +111,9 @@ void LensFlarePreviewer::computeGhostParameters()
         OLEF::RayTraceGhostAlgorithm::GhostAttribComputeParams computeParams;
 
         computeParams.m_angle = glm::radians(angle);
-        computeParams.m_boundingPasses = 3;
         computeParams.m_boundingRays = { 32, 32, 32 };
         computeParams.m_rayPresets = { 5, 16, 32, 64, 128 };
+        computeParams.m_targetVariance = 0.025f;
 
         // Compute the ghost attributes
         OLEF::GhostList currentGhosts = 
@@ -375,8 +375,8 @@ void LensFlarePreviewer::paintGL()
                 -lightSource.getIncidenceDirection(), 
                 glm::vec3(0.0f, 0.0f, -1.0f))));
 
-            auto it = m_precomputedGhosts.lowerBound(angle);
-            if (it != m_precomputedGhosts.end())
+            auto it = m_precomputedGhosts.lowerBound(angle - 0.1f);
+            if (it != m_precomputedGhosts.end() && glm::abs(angle - it.key()) < 1.0f)
                 allGhosts = it.value();
         }
 

@@ -273,7 +273,7 @@ void MainWindow::loadGhostBounds()
     m_lensFlarePreviewer->setPrecomputedGhosts(ghosts);
 
     // Let the views know about the change.
-    m_lensFlarePreviewer->opticalSystemChanged();
+    m_lensFlarePreviewer->update();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

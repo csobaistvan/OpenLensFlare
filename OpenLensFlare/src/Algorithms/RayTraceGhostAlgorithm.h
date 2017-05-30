@@ -72,14 +72,11 @@ public:
         /// The incoming angle to compute data for. 
         float m_angle = 0.0f;
 
-        /// The total number of bounding passes to take per ghost.
-        int m_boundingPasses = 2;
-
         /// Wavelengths used during precomputations
         std::vector<float> m_lambdas = { 650.0f, 510.0f, 475.0f };
 
-        /// The number of rays to use in each bounding step. The last element
-        /// is used if the number of passes exceeds the vector size.
+        /// The number of rays to use in each bounding step. The size of the
+        /// vector also determines the number of bounding steps.
         std::vector<int> m_boundingRays = { 32, 32 };
 
         /// The list of ray grid sizes to choose from.
@@ -95,7 +92,11 @@ public:
         float m_intensityClip = 0.00025f;
 
         /// The maximum variance across ghost triangles to accept a preset.
-        float m_targetVariance;
+        /// Note that the algorithm works by computing the average variance
+        /// of the projected ghost images, which is divided by the area of an
+        /// ideal cell triangle. The targeted variance is compared against this
+        /// value to determine if a preset is suitable.
+        float m_targetVariance = 0.01f;
     };
 
     /// Computes the ghost rendering attributes corresponding to the provided

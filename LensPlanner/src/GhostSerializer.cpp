@@ -264,7 +264,9 @@ bool GhostSerializer::deserialize()
 
     // Make sure it was successfuly read.
     if (xml.error())
+    {
         return false;
+    }
 
     // Save the results
     *m_ghosts = result;

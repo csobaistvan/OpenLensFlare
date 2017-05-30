@@ -3,6 +3,8 @@
 #include "Dependencies.h"
 
 /// The optical system previewer widget.
+///
+/// TODO: display invalid elements with a special color
 class OpticalSystemPreviewer: public QOpenGLWidget
 {
     Q_OBJECT;

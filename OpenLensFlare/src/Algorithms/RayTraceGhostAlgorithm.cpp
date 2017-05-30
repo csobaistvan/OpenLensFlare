@@ -8,6 +8,14 @@
 #include "RayTraceGhostAlgorithm_RenderGhost_GeometryShader.glsl.h"
 #include "RayTraceGhostAlgorithm_RenderGhost_FragmentShader.glsl.h"
 
+//TODO: implement two precomputation methods: transform feedback and compute
+//      shader versions, and expose a switch or something to allow the user
+//      choose from the desired version
+//TODO: extract the ray tracing code into a separate file and assemble the 
+//      required shaders (rendering, xfb precomputation, compute shader
+//      precomputation) using the multiple source file feature of the shader 
+//      compiler function
+
 namespace OLEF
 {
 
@@ -172,8 +180,14 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 	GLint vertexSize = 0;
 	GLint bufferSize = 0;
 	
-	for (size_t i = 0; i < ghosts.size(); ++i)
+	for (size_t ghostId = 0; ghostId < ghosts.size(); ++ghostId)
 	{
+		// Skip invalid ghosts
+		if (!m_opticalSystem->isValidGhost(ghosts[ghostId]))
+		{
+			continue;
+		}
+
 		// Per-channel vertices and bytes needed
 		int vertices = (maxRays - 1) * (maxRays - 1) * 6;
 		int bytes = vertices * sizeof(PerVertexData);
@@ -183,8 +197,8 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 		int totalBytes = bytes * (int) computeParams.m_lambdas.size();
 
 		// Per-channel offsets and sizes
-		vertexOffsets[i] = { vertexSize, vertices };
-		byteOffsets[i] = { bufferSize, bytes };
+		vertexOffsets[ghostId] = { vertexSize, vertices };
+		byteOffsets[ghostId] = { bufferSize, bytes };
 
 		// Total number of vertices and bytes needed
 		vertexSize += totalVerts;
@@ -205,12 +219,11 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 	// Disable rasterization
 	glEnable(GL_RASTERIZER_DISCARD);
 
-	// Compute bounding geometry
-	for (int passId = 0; passId < computeParams.m_boundingPasses; ++passId)
+	// Compute ghost bounding information
+	for (int passId = 0; passId < computeParams.m_boundingRays.size(); ++passId)
 	{
 		// Extract the current grid size
-		int numRays = computeParams.m_boundingRays[std::min(
-			computeParams.m_boundingRays.size() - 1, (size_t) passId)];
+		int numRays = computeParams.m_boundingRays[passId];
 		int numVertices = (numRays - 1) * (numRays - 1) * 6;
 
 		// Set it as the fixed ray grid size
@@ -219,34 +232,38 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 		// Process each ghost
 		for (int ghostId = 0; ghostId < ghosts.size(); ++ghostId)
 		{
-			if (m_opticalSystem->isValidGhost(result[ghostId]))
+			// Skip invalid or previously detected invisible ghosts
+			if (!m_opticalSystem->isValidGhost(result[ghostId]) || 
+				result[ghostId].getPupilBounds()[1][0] < 0.0f)
 			{
-				// Set the ghost we are rendering
-				parameters.m_ghost = result[ghostId];
+				continue;
+			}
 
-				// Process each channel
-				for (int chId = 0; chId < computeParams.m_lambdas.size(); ++chId)
-				{
-					// Set the current wavelength
-					parameters.m_lambda = computeParams.m_lambdas[chId];
+			// Set the ghost we are rendering
+			parameters.m_ghost = result[ghostId];
 
-					// Extract the corresponding byte offset and byte size
-					auto byteOffset = byteOffsets[ghostId][0];
-					auto byteSize = byteOffsets[ghostId][1];
+			// Process each channel
+			for (int chId = 0; chId < computeParams.m_lambdas.size(); ++chId)
+			{
+				// Set the current wavelength
+				parameters.m_lambda = computeParams.m_lambdas[chId];
 
-					// Bind the transform feedback buffer
-					glBindBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 
-						readBackBuffer, byteOffset + chId * byteSize, byteSize);
+				// Extract the corresponding byte offset and byte size
+				auto byteOffset = byteOffsets[ghostId][0];
+				auto byteSize = byteOffsets[ghostId][1];
 
-					// Start the transform feedback
-					glBeginTransformFeedback(GL_TRIANGLES);
+				// Bind the transform feedback buffer
+				glBindBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 
+					readBackBuffer, byteOffset + chId * byteSize, byteSize);
 
-					// Render the ghost
-					renderGhostChannel(parameters);
+				// Start the transform feedback
+				glBeginTransformFeedback(GL_TRIANGLES);
 
-					// End the transform feedback
-					glEndTransformFeedback();
-				}
+				// Render the ghost
+				renderGhostChannel(parameters);
+
+				// End the transform feedback
+				glEndTransformFeedback();
 			}
 		}
 		
@@ -309,17 +326,54 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 				}
 			}
 
-			// Store the bounds
-			pupilBounds[1] = pupilBounds[1] - pupilBounds[0];
-			sensorBounds[1] = sensorBounds[1] - sensorBounds[0];
+			// Make sure the ghost is visible
+			if (pupilBounds[1][0] < pupilBounds[0][0] ||
+				(pupilBounds[0][0] > 1.0f && pupilBounds[0][1] > 1.0f) || 
+				(pupilBounds[1][0] < -1.0f && pupilBounds[1][1] < -1.0f))
+			{
+				pupilBounds[0] = pupilBounds[1] = glm::vec2(-1.0f);
+				sensorBounds[0] = sensorBounds[1] = glm::vec2(-1.0f);
 
-			result[ghostId].setPupilBounds(pupilBounds);
-			result[ghostId].setSensorBounds(sensorBounds);
+				result[ghostId].setPupilBounds(pupilBounds);
+				result[ghostId].setSensorBounds(sensorBounds);
+			}
+
+			// Store the computed bounds
+			else
+			{
+				pupilBounds[1] = pupilBounds[1] - pupilBounds[0];
+				sensorBounds[1] = sensorBounds[1] - sensorBounds[0];
+
+				result[ghostId].setPupilBounds(pupilBounds);
+				result[ghostId].setSensorBounds(sensorBounds);
+			}
 		}
 
 		// Unmap the buffer
 		glUnmapBuffer(GL_ARRAY_BUFFER);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+
+	// Create the vectors that we will be using during the bounding process
+	std::vector<float> triangleAreas;   // Holds the area of each valid triangle
+	std::vector<float> areaDifferences; // Holds the difference between each
+	                                    // triangle area and the average area
+	std::vector<float> totalAreas;      // Holds the total areas for each channel
+	std::vector<float> avgAreas;        // Holds the average areas for each channel
+	std::vector<float> variances;       // Holds the per-channel variances
+
+	triangleAreas.reserve((maxRaysPresets - 1) * (maxRaysPresets - 1) * 2);
+	areaDifferences.reserve((maxRaysPresets - 1) * (maxRaysPresets - 1) * 2);
+	totalAreas.reserve(computeParams.m_lambdas.size());
+	avgAreas.reserve(computeParams.m_lambdas.size());
+	variances.reserve(computeParams.m_lambdas.size());
+
+	// Set the ray grid sizes to 0 for each ghost, to indicate that it needs
+	// to be processed
+	for (int ghostId = 0; ghostId < ghosts.size(); ++ghostId)
+	{
+		result[ghostId].setMinimumRays(0);
+		result[ghostId].setOptimalRays(0);
 	}
 
 	// Compute bounding geometry
@@ -335,34 +389,39 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 		// Process each ghost
 		for (int ghostId = 0; ghostId < ghosts.size(); ++ghostId)
 		{
-			if (m_opticalSystem->isValidGhost(result[ghostId]))
+			// Skip invalid, invisible, and already finished ghosts
+			if (!m_opticalSystem->isValidGhost(result[ghostId]) || 
+				result[ghostId].getPupilBounds()[1][0] < 0.0f ||
+				result[ghostId].getMinimumRays() != 0)
 			{
-				// Set the ghost we are rendering
-				parameters.m_ghost = result[ghostId];
+				continue;
+			}
 
-				// Process each channel
-				for (int chId = 0; chId < computeParams.m_lambdas.size(); ++chId)
-				{
-					// Set the current wavelength
-					parameters.m_lambda = computeParams.m_lambdas[chId];
+			// Set the ghost we are rendering
+			parameters.m_ghost = result[ghostId];
 
-					// Extract the corresponding byte offset and byte size
-					auto byteOffset = byteOffsets[ghostId][0];
-					auto byteSize = byteOffsets[ghostId][1];
+			// Process each channel
+			for (int chId = 0; chId < computeParams.m_lambdas.size(); ++chId)
+			{
+				// Set the current wavelength
+				parameters.m_lambda = computeParams.m_lambdas[chId];
 
-					// Bind the transform feedback buffer
-					glBindBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 
-						readBackBuffer, byteOffset + chId * byteSize, byteSize);
+				// Extract the corresponding byte offset and byte size
+				auto byteOffset = byteOffsets[ghostId][0];
+				auto byteSize = byteOffsets[ghostId][1];
 
-					// Start the transform feedback
-					glBeginTransformFeedback(GL_TRIANGLES);
+				// Bind the transform feedback buffer
+				glBindBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 
+					readBackBuffer, byteOffset + chId * byteSize, byteSize);
 
-					// Render the ghost
-					renderGhostChannel(parameters);
+				// Start the transform feedback
+				glBeginTransformFeedback(GL_TRIANGLES);
 
-					// End the transform feedback
-					glEndTransformFeedback();
-				}
+				// Render the ghost
+				renderGhostChannel(parameters);
+
+				// End the transform feedback
+				glEndTransformFeedback();
 			}
 		}
 		
@@ -375,7 +434,141 @@ GhostList RayTraceGhostAlgorithm::computeGhostAttributes(
 		// Process the generated ray data to find the rest of the attributes
 		for (int ghostId = 0; ghostId < ghosts.size(); ++ghostId)
 		{
-			
+			// Skip invalid, invisible, and already finished ghosts
+			if (!m_opticalSystem->isValidGhost(result[ghostId]) || 
+				result[ghostId].getPupilBounds()[1][0] < 0.0f ||
+				result[ghostId].getMinimumRays() != 0)
+			{
+				continue;
+			}
+
+            // Clear the variance vector
+            totalAreas.clear();
+            avgAreas.clear();
+            variances.clear();
+			float totalIntensity = 0.0f;
+			int validVertices = 0;
+
+			// Go through each channel
+			for (int channelId = 0; channelId < computeParams.m_lambdas.size(); ++channelId)
+			{
+				// Clear the temporary buffer holding triangle information
+				triangleAreas.clear();
+
+				// Process each vertex
+				for (int vertexId = 0; vertexId < numVertices; ++vertexId)
+				{
+					int actualVertexId = vertexOffsets[ghostId][0] + 
+						channelId * vertexOffsets[ghostId][1] + vertexId;
+					const auto& vertex = vertices[actualVertexId];
+
+					if (vertex.m_radius <= computeParams.m_radiusClip && 
+						vertex.m_intensity >= computeParams.m_intensityClip && 
+						vertex.m_irisDistance <= computeParams.m_distanceClip)
+					{
+						totalIntensity += vertex.m_intensity;
+						++validVertices;
+					}
+				}
+
+				// Process each triangle
+				for (int triangleId = 0; triangleId < numVertices / 3; ++triangleId)
+				{
+					// Index of the first vertex
+					int baseVertexId = vertexOffsets[ghostId][0] + 
+						channelId * vertexOffsets[ghostId][1] + triangleId * 3;
+
+					// Only keep those triangles that are fully valid (a.k.a.
+					// all of its vertices are valid) - this should minimize
+					// the effect of degenerate values on the output
+					bool keep = true;
+					for (int vertexId = 0; vertexId < 3; ++vertexId)
+					{
+						// Extract the current vertex
+						int actualVertexId = baseVertexId + vertexId;
+						const auto& vertex = vertices[actualVertexId];
+
+						keep = keep && (
+							vertex.m_radius <= computeParams.m_radiusClip && 
+							vertex.m_intensity >= computeParams.m_intensityClip && 
+							vertex.m_irisDistance <= computeParams.m_distanceClip);
+					}
+
+					// Skip a degenerate triangle
+					if (!keep)
+					{
+						continue;
+					}
+
+					// Extract the triangle vertices
+					glm::vec2 triVertices[] =
+					{
+						vertices[baseVertexId + 0].m_position,
+						vertices[baseVertexId + 1].m_position,
+						vertices[baseVertexId + 2].m_position,
+					};
+					
+					// Compute the area of the projected triangle
+					float triangleArea = 0.5f * glm::abs(
+						triVertices[0].x * (triVertices[1].y - triVertices[2].y) +
+						triVertices[1].x * (triVertices[2].y - triVertices[0].y) +
+						triVertices[2].x * (triVertices[0].y - triVertices[1].y));
+
+					// Store it
+					triangleAreas.push_back(triangleArea);
+				}
+				
+				// Skip the remaining computations if the channel is fully invisible
+				if (triangleAreas.empty())
+					continue;
+
+				// Compute the total area
+				float totalArea = std::accumulate(
+					triangleAreas.begin(), triangleAreas.end(), 0.0f);
+				totalAreas.push_back(totalArea);
+
+				// Compute the avg area
+				float avgArea = totalArea / triangleAreas.size();
+				avgAreas.push_back(avgArea);
+
+				// Compute the variance
+				areaDifferences.resize(triangleAreas.size());
+				std::transform(
+					triangleAreas.begin(), triangleAreas.end(), areaDifferences.begin(), 
+					[&] (float area) { return glm::pow(area - avgArea, 2.0f); });
+
+				float totalVariance = std::accumulate(
+					areaDifferences.begin(), areaDifferences.end(), 0.0f);
+				float variance = glm::sqrt(totalVariance / areaDifferences.size());
+				variances.push_back(variance);
+			}
+
+			// Compute the average variance
+			float avgVariance = std::accumulate(
+				variances.begin(), variances.end(), 0.0f) / variances.size();
+
+			// Area of an 'ideal' triangle - that is, if the ghost projection
+			// was equally distributed over the sensor bounds, then this would
+			// be the area of a single triangle cell
+			float cellArea = 0.5f * 
+				(result[ghostId].getSensorBounds()[1].x / (numRays - 1)) *
+				(result[ghostId].getSensorBounds()[1].y / (numRays - 1));
+
+			// Compute the average variance's ratio to the ideal cell area
+			float varianceToCellArea = avgVariance / cellArea;
+
+			// The current variance value to use for comparison.
+            //float currentVariance = varianceToCellArea;
+			float currentVariance = avgVariance;
+
+			// Store the grid size as the result if the variance is small enough
+			if (currentVariance <= computeParams.m_targetVariance ||
+				numRays == computeParams.m_rayPresets.back())
+			{
+				result[ghostId].setMinimumRays(numRays);
+				result[ghostId].setOptimalRays(numRays);
+				result[ghostId].setAverageIntensity(totalIntensity / validVertices);
+			}
 		}
 
 		// Unmap the buffer
@@ -419,13 +612,14 @@ void RayTraceGhostAlgorithm::renderGhostChannel(const RenderParameters& paramete
 	// Temporary vectors for the lens parameters
 	auto elementCount = m_opticalSystem->getElementCount() + 1;
 
-	/// TODO: these could just be statically sized local arrays on the stack
-	std::vector<float> heights(elementCount, 0.0f);
-	std::vector<float> curvatures(elementCount, 0.0f);
-	std::vector<float> apertures(elementCount, 0.0f);
-	std::vector<float>  thicknesses(elementCount, 0.0f);
-	std::vector<glm::vec3> centers(elementCount, glm::vec3(0.0f));
-	std::vector<glm::vec3> refractions(elementCount, glm::vec3(1.0f));
+	static const int MAX_ELEMENTS = 64;
+
+	float heights[MAX_ELEMENTS] = { 0.0f };
+	float curvatures[MAX_ELEMENTS] = { 0.0f };
+	float apertures[MAX_ELEMENTS] = { 0.0f };
+	float thicknesses[MAX_ELEMENTS] = { 0.0f };
+	glm::vec3 centers[MAX_ELEMENTS] = { glm::vec3(0.0f) };
+	glm::vec3 refractions[MAX_ELEMENTS] = { glm::vec3(1.0f) };
 
 	// Fill the lens parameter arrays
 	float lensDistance = sensorDistance;

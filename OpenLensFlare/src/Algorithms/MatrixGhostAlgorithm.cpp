@@ -1,7 +1,6 @@
 #include "MatrixGhostAlgorithm.h"
 #include "GLHelpers.h"
 
-#include "Common_Version.glsl.h"
 #include "Common_Functions.glsl.h"
 #include "Common_ColorSpace.glsl.h"
 #include "MatrixGhostAlgorithm_RenderGhost_VertexShader.glsl.h"

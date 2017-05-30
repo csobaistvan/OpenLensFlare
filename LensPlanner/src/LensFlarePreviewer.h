@@ -59,7 +59,7 @@ public:
         float m_ghostRadiusClip = 1.0f;
 
         /// Intensity clipping value.
-        float m_ghostIntensityClip = 1.0f;
+        float m_ghostIntensityClip = 0.05f;
 
         /// The render mode used to render these ghosts.
         OLEF::RayTraceGhostAlgorithm::RenderMode m_ghostRenderMode;
